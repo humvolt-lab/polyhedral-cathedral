@@ -1,1 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>Polyhedral Cathedral — Drafting Lab</title>
 
+<script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family: system-ui,-apple-system,sans-serif;
+  background:#f4f1e8;
+  color:#111;
+  touch-action:none;
+  user-select:none;
+}
+
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+/* CONTROLS */
+
+.controls{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+
+button{
+  font-size:18px;
+  padding:10px 14px;
+  border:2px solid #222;
+  background:#fff;
+  border-radius:6px;
+}
+
+.stepper{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.value{min-width:46px;text-align:center;font-weight:600}
+
+/* SHAPES AREA */
+
+#shapes{
+  flex:1;
+  position:relative;
+  border:2px dashed #777;
+  margin-bottom:10px;
+  background-image:
+    linear-gradient(#ddd 1px,transparent 1px),
+    linear-gradient(90deg,#ddd 1px,transparent 1px);
+  background-size:20px 20px;
+}
+
+.shape{
+  position:absolute;
+  width:60px;
+  height:60px;
+  border:2px solid #222;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  touch-action:none;
+}
+
+.circle{border-radius:50%}
+.square{}
+.hex{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+
+/* GRID */
+
+#grid{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:8px;
+}
+
+.cell{
+  position:relative;
+  height:74px;
+  border:2px solid #222;
+  background:#fff;
+}
+
+.cell.active{background:#e6f3ff}
+
+.effect{
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  height:28px;
+  border-top:2px solid #222;
+  background:#eee;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+}
+
+.playhead{outline:3px solid #ff3b3b}
+
+/* START OVERLAY */
+
+#overlay{
+  position:fixed;
+  inset:0;
+  background:#f4f1e8;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+}
+
+#startBtn{font-size:24px;padding:16px 24px}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <button id="startBtn">START SYSTEM</button>
+</div>
+
+<div id="app">
+
+<div class="controls">
+  <div class="stepper">
+    STEPS
+    <button id="stepsDown">−</button>
+    <div class="value" id="stepsVal">16</div>
+    <button id="stepsUp">+</button>
+  </div>
+
+  <button id="playBtn">STOP</button>
+
+  <div class="stepper">
+    BPM
+    <button id="tempoDown">−</button>
+    <div class="value" id="tempoVal">90</div>
+    <button id="tempoUp">+</button>
+  </div>
+</div>
+
+<div id="shapes"></div>
+<div id="grid"></div>
+
+</div>
+
+<script>
+/* ---------- GLOBAL ---------- */
+
+let bpm=90, stepCount=16, currentStep=0, playing=true;
+Tone.Transport.bpm.value=bpm;
+
+/* ---------- MASTER CHAIN ---------- */
+
+const tape = new Tone.Saturation(0.4);
+const comp = new Tone.Compressor(-10,3);
+tape.connect(comp);
+comp.toDestination();
+
+/* ---------- ANALOG SYNTH SNIPPET ---------- */
+
+function makeAnalogSnippet(){
+
+  const synth = new Tone.MonoSynth({
+    oscillator:{type:"sawtooth"},
+    filter:{Q:1, type:"lowpass", rolloff:-24},
+    envelope:{attack:0.01,decay:0.3,sustain:0.4,release:0.6},
+    filterEnvelope:{attack:0.01,decay:0.2,sustain:0.3,release:0.5,baseFrequency:120,octaves:3}
+  }).connect(tape);
+
+  // subtle pitch drift
+  const lfo = new Tone.LFO(0.2, -5, 5).start();
+  lfo.connect(synth.detune);
+
+  const patterns = [
+    ["C2","G2","Bb2","C3"],
+    ["Eb2","F2","G2"],
+    ["C3","Bb2","G2","F2","Eb2"],
+    ["C2","C3","Bb2"]
+  ];
+
+  const notes = patterns[Math.floor(Math.random()*patterns.length)];
+
+  return time=>{
+    notes.forEach((n,i)=>{
+      synth.triggerAttackRelease(n,"8n",time+i*0.15);
+    });
+  };
+}
+
+/* ---------- DRUM SNIPPET ---------- */
+
+function makeDrumSnippet(){
+
+  const kick = new Tone.MembraneSynth().connect(tape);
+  const snare = new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:0.001,decay:0.15,sustain:0}}).connect(tape);
+  const hat = new Tone.MetalSynth({frequency:200,decay:0.05}).connect(tape);
+
+  const patterns=[
+    t=>{kick.triggerAttackRelease("C1","8n",t);hat.triggerAttackRelease("16n",t+0.1);snare.triggerAttackRelease("16n",t+0.2)},
+    t=>{kick.triggerAttackRelease("C1","8n",t);hat.triggerAttackRelease("16n",t+0.05);hat.triggerAttackRelease("16n",t+0.15)},
+    t=>{snare.triggerAttackRelease("16n",t);hat.triggerAttackRelease("16n",t+0.1);kick.triggerAttackRelease("C1","8n",t+0.2)}
+  ];
+
+  return patterns[Math.floor(Math.random()*patterns.length)];
+}
+
+function randomSnippet(){
+  return Math.random()<0.5 ? makeDrumSnippet() : makeAnalogSnippet();
+}
+
+/* ---------- EFFECTS ---------- */
+
+function randomEffect(){
+  const r=Math.random();
+  if(r<0.25) return new Tone.FeedbackDelay("8n",0.4).connect(tape);
+  if(r<0.5) return new Tone.Distortion(0.7).connect(tape);
+  if(r<0.75) return new Tone.BitCrusher(4).connect(tape);
+  return new Tone.Reverb(2).connect(tape);
+}
+
+/* ---------- SHAPES ---------- */
+
+const shapesDiv=document.getElementById("shapes");
+const shapeTypes=["circle","square","hex"];
+
+function spawnShape(){
+  const el=document.createElement("div");
+  el.className="shape "+shapeTypes[Math.floor(Math.random()*shapeTypes.length)];
+  el.style.left=Math.random()*80+"%";
+  el.style.top=Math.random()*70+"%";
+
+  el.snippet=randomSnippet();
+  shapesDiv.appendChild(el);
+
+  let ox,oy;
+
+  el.onpointerdown=e=>{
+    el.setPointerCapture(e.pointerId);
+    ox=e.offsetX; oy=e.offsetY;
+  };
+
+  el.onpointermove=e=>{
+    if(e.pressure>0){
+      el.style.left=(e.pageX-ox)+"px";
+      el.style.top=(e.pageY-oy)+"px";
+    }
+  };
+
+  el.onpointerup=e=>{
+    el.releasePointerCapture(e.pointerId);
+    checkDrop(el);
+  };
+}
+
+for(let i=0;i<8;i++) spawnShape();
+
+/* ---------- GRID ---------- */
+
+const grid=document.getElementById("grid");
+const cells=[];
+
+for(let i=0;i<16;i++){
+  const cell=document.createElement("div");
+  cell.className="cell";
+
+  const fx=document.createElement("div");
+  fx.className="effect";
+  fx.textContent="FX";
+
+  cell.appendChild(fx);
+  grid.appendChild(cell);
+
+  cells.push({cell,fx,snippet:null,effect:null});
+
+  fx.onclick=()=>{
+    if(!cells[i].snippet) return;
+
+    if(cells[i].effect){
+      cells[i].effect.dispose();
+      cells[i].effect=null;
+      fx.style.background="#eee";
+    }else{
+      cells[i].effect=randomEffect();
+      fx.style.background="#ffd";
+    }
+  };
+}
+
+/* DROP + RESPAWN */
+
+function checkDrop(shape){
+
+  cells.forEach(c=>{
+    const r=c.cell.getBoundingClientRect();
+    const s=shape.getBoundingClientRect();
+
+    if(!(s.right<r.left||s.left>r.right||s.bottom<r.top||s.top>r.bottom)){
+      if(!c.snippet){
+        c.snippet=shape.snippet; // freeze audio
+        c.cell.classList.add("active");
+        shape.remove();
+        spawnShape(); // NEW SHAPE
+      }
+    }
+  });
+}
+
+/* ---------- PLAYBACK ---------- */
+
+Tone.Transport.scheduleRepeat(time=>{
+  cells.forEach(c=>c.cell.classList.remove("playhead"));
+
+  const c=cells[currentStep];
+  c.cell.classList.add("playhead");
+
+  if(c.snippet) c.snippet(time);
+
+  currentStep=(currentStep+1)%stepCount;
+
+},"16n");
+
+/* ---------- CONTROLS ---------- */
+
+playBtn.onclick=()=>{
+  playing=!playing;
+  if(playing) Tone.Transport.start();
+  else Tone.Transport.pause();
+  playBtn.textContent=playing?"STOP":"PLAY";
+};
+
+tempoUp.onclick=()=>setTempo(bpm+5);
+tempoDown.onclick=()=>setTempo(bpm-5);
+
+function setTempo(v){
+  bpm=Math.max(40,Math.min(180,v));
+  Tone.Transport.bpm.value=bpm;
+  tempoVal.textContent=bpm;
+}
+
+stepsUp.onclick=()=>setSteps(stepCount+1);
+stepsDown.onclick=()=>setSteps(stepCount-1);
+
+function setSteps(v){
+  stepCount=Math.max(1,Math.min(16,v));
+  stepsVal.textContent=stepCount;
+};
+
+/* ---------- START AUDIO ---------- */
+
+startBtn.onclick=async()=>{
+  await Tone.start();
+  Tone.Transport.start();
+  overlay.style.display="none";
+};
+</script>
+
+</body>
+</html>
