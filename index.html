@@ -150,8 +150,8 @@ html, body {
 .palette-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(4px,1.5vw,10px);
-  margin-bottom: clamp(6px,1.5vw,12px);
+  gap: clamp(3px,1.2vw,8px);
+  margin-bottom: clamp(4px,1.2vw,8px);
 }
 
 .shape-cell {
@@ -497,6 +497,7 @@ html, body {
   <!-- shape palette -->
   <div class="palette-row" id="palette"></div>
   <div class="palette-row" id="palette2"></div>
+  <div class="palette-row" id="palette3"></div>
 
   <div class="divider" data-label="sequence" style="margin-bottom:12px;"></div>
 
@@ -2345,40 +2346,56 @@ const MELODIC_SNIPPETS = [
 ];
 
 const SNIPPET_ROLES = {
-  // Dual saw arps
-  dsaw_arp_up:'lead', dsaw_arp_down:'lead', dsaw_arp_loop:'lead',
-  dsaw_arp_spread:'lead', dsaw_two_note:'lead', dsaw_chord:'pad',
-  // Dual saw bass
-  dsaw_bass_one:'bass', dsaw_bass_walk:'bass', dsaw_bass_pump:'bass',
-  // Sub bass
+  // ── Dual saw arps (lead / saw_bass)
+  dsaw_arp_up:'saw_bass',  dsaw_arp_down:'saw_bass', dsaw_arp_loop:'saw_bass',
+  dsaw_arp_spread:'lead',  dsaw_two_note:'lead',     dsaw_chord:'pad',
+  // ── Dual saw bass lines (saw_bass — the category we want to guarantee)
+  dsaw_bass_one:'saw_bass', dsaw_bass_walk:'saw_bass', dsaw_bass_pump:'saw_bass',
+  // ── Sub bass
   sub_one:'bass', sub_two:'bass',
-  // Dark pad
+  // ── Dark pad
   dark_pad_one:'pad', dark_pad_two:'pad',
-  // Pulse lead
+  // ── Pulse lead
   pulse_line:'lead', pulse_arp:'lead',
-  // 808 boom
+  // ── 808 boom bass
   boom_one:'bass', boom_two:'bass',
-  // New melodic
+  // ── Acid (bass-adjacent but distinct)
   acid_crawl:'bass', acid_sequence:'bass',
+  // ── Minimal stab / chord
   minimal_stab:'lead', minimal_chord:'lead',
+  // ── Plucked
   pluck_arp:'lead', pluck_melody:'lead',
+  // ── Pads / drones
   drone_slow:'pad', pad_swell:'pad',
+  // ── Offbeat / funk bass
   offbeat_bass:'bass', house_bass:'bass',
+  // ── Melodic leads
   lead_phrase:'lead', lead_call:'lead',
+  // ── Polyrhythm
   poly_three:'lead', poly_five:'lead',
+  // ── 808 walk/echo
   boom_walk:'bass', boom_echo:'bass',
-  // New melodic
-  modal_wander:'lead', penta_spiral:'lead', seq_blip:'lead', gamelan:'lead',
-  lofi_melody:'pad',  octave_pump:'bass',  wobble_bass:'bass', triad_arp:'lead',
-  midnight_chord:'pad', broken_chord:'lead', step_bass:'bass', chromatic_run:'lead',
-  sus_float:'pad', counterpoint:'lead', porta_slide:'bass', reggae_skank:'lead',
-  trance_lead:'lead', groove_one:'bass',
+  // ── Modal / world
+  modal_wander:'lead', penta_spiral:'lead', gamelan:'lead',
+  // ── Sequencer / machine
+  seq_blip:'lead', blip:'lead',
+  // ── Lo-fi / pads
+  lofi_melody:'pad', midnight_chord:'pad', sus_float:'pad',
+  // ── Tonal bass
+  octave_pump:'saw_bass', wobble_bass:'bass', step_bass:'bass',
+  porta_slide:'bass', groove_one:'bass',
+  // ── Harmonic leads
+  triad_arp:'lead', broken_chord:'lead', chromatic_run:'lead',
+  counterpoint:'lead', reggae_skank:'lead', trance_lead:'lead',
 };
 
 
-const BASS_SNIPPET_IDS = Object.keys(SNIPPET_ROLES).filter(id=>SNIPPET_ROLES[id]==='bass');
-const BASS_SNIPPETS    = MELODIC_SNIPPETS.filter(s=>BASS_SNIPPET_IDS.includes(s.id));
-const NON_BASS_MEL     = MELODIC_SNIPPETS.filter(s=>SNIPPET_ROLES[s.id]&&SNIPPET_ROLES[s.id]!=='bass');
+const BASS_SNIPPET_IDS  = Object.keys(SNIPPET_ROLES).filter(id=>['bass','saw_bass'].includes(SNIPPET_ROLES[id]));
+const SAW_BASS_IDS      = Object.keys(SNIPPET_ROLES).filter(id=>SNIPPET_ROLES[id]==='saw_bass');
+const BASS_SNIPPETS     = MELODIC_SNIPPETS.filter(s=>BASS_SNIPPET_IDS.includes(s.id));
+const SAW_BASS_SNIPPETS = MELODIC_SNIPPETS.filter(s=>SAW_BASS_IDS.includes(s.id));
+const NON_BASS_MEL      = MELODIC_SNIPPETS.filter(s=>SNIPPET_ROLES[s.id]&&!['bass','saw_bass'].includes(SNIPPET_ROLES[s.id]));
+const PAD_SNIPPETS      = MELODIC_SNIPPETS.filter(s=>SNIPPET_ROLES[s.id]==='pad');
 
 const SNIPPETS = [...DRUM_SNIPPETS, ...MELODIC_SNIPPETS];
 
@@ -2464,66 +2481,70 @@ function releaseCombo(item) {
 /* ─── Palette composition helpers ─────────────────────────── */
 function palDrumCount()  { return palette.filter(p=>p&&p.type.isDrum).length; }
 function palMelCount()   { return palette.filter(p=>p&&!p.type.isDrum).length; }
-function palBassCount()  { return palette.filter(p=>p&&!p.type.isDrum&&SNIPPET_ROLES[p.type.id]==='bass').length; }
+function palBassCount()    { return palette.filter(p=>p&&!p.type.isDrum&&['bass','saw_bass'].includes(SNIPPET_ROLES[p.type.id])).length; }
+function palSawBassCount() { return palette.filter(p=>p&&!p.type.isDrum&&SNIPPET_ROLES[p.type.id]==='saw_bass').length; }
 
-// 3 drums / 5 melodic. Melodic heavily biased toward bass.
+// 6 drums / 6 melodic. Melodic biased toward saw/bass.
 function pickNextSnippet() {
   const dc = palDrumCount();
   const mc = palMelCount();
-  if(dc < 3 && mc >= 5) return DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)];
-  if(mc < 5 && dc >= 3) return pickMelodicSnippet();
-  if(Math.random() < 0.35) return DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)];
+  if(dc < 6 && mc >= 6) return DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)];
+  if(mc < 6 && dc >= 6) return pickMelodicSnippet();
+  if(Math.random() < 0.45) return DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)];
   return pickMelodicSnippet();
 }
 
 function pickMelodicSnippet() {
-  // 65% bass, 25% lead/stab, 10% pad
+  const sc = palSawBassCount();
   const bc = palBassCount();
-  if(bc < 3 && Math.random() < 0.8)
+  const melTotal = palMelCount();
+  // Always ensure ≥2 saw/bass saw sounds among melodic shapes
+  if(sc < 2) return SAW_BASS_SNIPPETS[Math.floor(Math.random()*SAW_BASS_SNIPPETS.length)];
+  // Up to half melodic slots should be bass (saw_bass + bass combined)
+  if(bc < Math.floor(melTotal*0.5) && Math.random() < 0.75)
     return BASS_SNIPPETS[Math.floor(Math.random()*BASS_SNIPPETS.length)];
+  // Weighted roll: 40% saw_bass, 25% other bass, 25% lead, 10% pad
   const roll = Math.random();
+  if(roll < 0.40) return SAW_BASS_SNIPPETS[Math.floor(Math.random()*SAW_BASS_SNIPPETS.length)];
   if(roll < 0.65) return BASS_SNIPPETS[Math.floor(Math.random()*BASS_SNIPPETS.length)];
   if(roll < 0.90) return NON_BASS_MEL[Math.floor(Math.random()*NON_BASS_MEL.length)];
-  return MELODIC_SNIPPETS[Math.floor(Math.random()*MELODIC_SNIPPETS.length)];
+  return PAD_SNIPPETS[Math.floor(Math.random()*PAD_SNIPPETS.length)];
 }
 
 function spawnItem() {
-  // Always maintain 4 drums + 4 melodic
+  // Maintain 6 drums + 6 melodic
   const dc = palDrumCount();
   const mc = palMelCount();
-  if(dc < 4) return makeSpawnedItem(DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)]);
-  if(mc < 4) return makeSpawnedItem(pickMelodicSnippet());
+  if(dc < 6) return makeSpawnedItem(DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)]);
+  if(mc < 6) return makeSpawnedItem(pickMelodicSnippet());
   return makeSpawnedItem(pickNextSnippet());
 }
 
 function rebalancePalette() {
-  // Enforce exactly 4 drums + 4 melodic in palette
-  // Over-represented type gets swapped toward the target
+  // Enforce 6 drums + 6 melodic; within melodic ensure ≥2 saw_bass
   let dc = palDrumCount();
   let mc = palMelCount();
-  // Swap excess drums → melodic
-  if(dc > 4) {
+  if(dc > 6) {
     const idxs = shuffle(palette.map((p,i)=>p&&p.type.isDrum?i:-1).filter(x=>x>=0));
-    idxs.slice(0, dc-4).forEach(i=>{
-      releaseCombo(palette[i]);
-      palette[i] = makeSpawnedItem(pickMelodicSnippet());
-    });
+    idxs.slice(0,dc-6).forEach(i=>{ releaseCombo(palette[i]); palette[i]=makeSpawnedItem(pickMelodicSnippet()); });
   }
   dc = palDrumCount(); mc = palMelCount();
-  // Swap excess melodic → drums
-  if(mc > 4) {
+  if(mc > 6) {
     const idxs = shuffle(palette.map((p,i)=>p&&!p.type.isDrum?i:-1).filter(x=>x>=0));
-    idxs.slice(0, mc-4).forEach(i=>{
-      releaseCombo(palette[i]);
-      palette[i] = makeSpawnedItem(DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)]);
-    });
+    idxs.slice(0,mc-6).forEach(i=>{ releaseCombo(palette[i]); palette[i]=makeSpawnedItem(DRUM_SNIPPETS[Math.floor(Math.random()*DRUM_SNIPPETS.length)]); });
+  }
+  // Ensure ≥2 saw_bass in melodic slots
+  const sc = palSawBassCount();
+  if(sc < 2) {
+    const nonSawMelIdxs = shuffle(palette.map((p,i)=>p&&!p.type.isDrum&&SNIPPET_ROLES[p.type.id]!=='saw_bass'?i:-1).filter(x=>x>=0));
+    nonSawMelIdxs.slice(0, 2-sc).forEach(i=>{ releaseCombo(palette[i]); palette[i]=makeSpawnedItem(SAW_BASS_SNIPPETS[Math.floor(Math.random()*SAW_BASS_SNIPPETS.length)]); });
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════════════════ */
-const PAL_SIZE = 8;
+const PAL_SIZE = 12;
 let palette  = [];
 let seqCells = [ new Array(8).fill(null), new Array(8).fill(null) ];
 let steps    = 8;
@@ -2537,15 +2558,20 @@ function initState() {
   usedCombos.clear();
   songKey = null;
   palette = [];
-  // Always 4 drums + 4 synth (even split)
-  const drumPool = shuffle([...DRUM_SNIPPETS]);
-  const bassPool = shuffle([...BASS_SNIPPETS]);
-  const leadPool = shuffle([...NON_BASS_MEL]);
-  const melPool  = shuffle([...bassPool, ...leadPool]);
-  const chosen = [
-    ...drumPool.slice(0,4),
-    ...melPool.slice(0,4),
-  ];
+  // 6 drums + 6 melodic — melodic always has ≥2 saw_bass
+  const drumPool    = shuffle([...DRUM_SNIPPETS]);
+  const sawBassPool = shuffle([...SAW_BASS_SNIPPETS]);
+  const bassPool    = shuffle([...BASS_SNIPPETS]);
+  const leadPool    = shuffle([...NON_BASS_MEL]);
+  const padPool     = shuffle([...PAD_SNIPPETS]);
+  // Melodic: 2 guaranteed saw_bass + 2 other bass + 1 lead + 1 pad
+  const melChosen = shuffle([
+    ...sawBassPool.slice(0,2),
+    ...bassPool.filter(s=>SNIPPET_ROLES[s.id]!=='saw_bass').slice(0,2),
+    ...leadPool.slice(0,1),
+    ...padPool.slice(0,1),
+  ]);
+  const chosen = [...drumPool.slice(0,6), ...melChosen.slice(0,6)];
   shuffle(chosen).forEach(snippet => {
     const {shape, color} = pickUnusedCombo();
     usedCombos.add(shape+'|'+color);
@@ -2556,18 +2582,21 @@ function initState() {
 
 // Swap all palette shapes for fresh ones — keeps sequencer intact
 function shufflePalette() {
-  // Clear palette combos and rebuild with new random picks
   palette.forEach(p => releaseCombo(p));
   usedCombos.clear();
   songKey = null;
-  const drumPool = shuffle([...DRUM_SNIPPETS]);
-  const bassPool = shuffle([...BASS_SNIPPETS]);
-  const leadPool = shuffle([...NON_BASS_MEL]);
-  const melPool  = shuffle([...bassPool, ...leadPool]);
-  const chosen = [
-    ...drumPool.slice(0,4),
-    ...melPool.slice(0,4),
-  ];
+  const drumPool    = shuffle([...DRUM_SNIPPETS]);
+  const sawBassPool = shuffle([...SAW_BASS_SNIPPETS]);
+  const bassPool    = shuffle([...BASS_SNIPPETS]);
+  const leadPool    = shuffle([...NON_BASS_MEL]);
+  const padPool     = shuffle([...PAD_SNIPPETS]);
+  const melChosen = shuffle([
+    ...sawBassPool.slice(0,2),
+    ...bassPool.filter(s=>SNIPPET_ROLES[s.id]!=='saw_bass').slice(0,2),
+    ...leadPool.slice(0,1),
+    ...padPool.slice(0,1),
+  ]);
+  const chosen = [...drumPool.slice(0,6), ...melChosen.slice(0,6)];
   palette = [];
   shuffle(chosen).forEach(snippet => {
     const {shape, color} = pickUnusedCombo();
@@ -2653,7 +2682,7 @@ function shapeSVG(shape, color, anim, small=false) {
 }
 
 function renderPalette() {
-  ['palette','palette2'].forEach((id,ri) => {
+  ['palette','palette2','palette3'].forEach((id,ri) => {
     const el=document.getElementById(id);
     el.innerHTML='';
     for(let i=0;i<4;i++){
