@@ -84,9 +84,11 @@ html, body {
 #app {
   width: 100%; max-width: 430px;
   background: var(--canvas);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex; flex-direction: column;
-  padding: 20px 16px 24px;
+  padding: clamp(8px,2vw,16px) clamp(8px,3vw,16px) clamp(8px,2vw,16px);
   gap: 0;
   opacity: 0;
   transition: opacity 0.8s ease 0.3s;
@@ -97,17 +99,17 @@ html, body {
 .hdr {
   display: flex; align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 12px;
+  margin-bottom: clamp(8px,2vw,16px);
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--dust2);
 }
 
 .hdr-title {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 28px;
+  font-size: clamp(18px,5vw,26px);
   color: var(--ink);
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   line-height: 1;
 }
 
@@ -148,8 +150,8 @@ html, body {
 .palette-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: clamp(4px,1.5vw,10px);
+  margin-bottom: clamp(6px,1.5vw,12px);
 }
 
 .shape-cell {
@@ -180,7 +182,7 @@ html, body {
   width: 100%;
   height: 1px;
   background: var(--dust2);
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   position: relative;
 }
 .divider::after {
@@ -204,11 +206,11 @@ html, body {
 .transport {
   display: flex; align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 .play-ring {
-  width: 44px; height: 44px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   border: 1.5px solid var(--ink);
   background: none;
@@ -236,10 +238,10 @@ html, body {
 .seq-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
-  margin-bottom: 5px;
+  gap: 3px;
+  margin-bottom: 3px;
 }
-.seq-grid + .seq-grid { margin-bottom: 14px; }
+.seq-grid + .seq-grid { margin-bottom: 8px; }
 
 .seq-sq {
   aspect-ratio: 1;
@@ -274,8 +276,8 @@ html, body {
 .fx-row {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
-  margin-bottom: 10px;
+  gap: 3px;
+  margin-bottom: 6px;
 }
 .fx-dot-wrap {
   display: flex; align-items: center; justify-content: center;
@@ -346,7 +348,7 @@ html, body {
   border-top: 1px solid var(--dust2);
 }
 .void-ring {
-  width: 44px; height: 44px;
+  width: 40px; height: 40px;
   border-radius: 50%;
   border: 1.5px solid var(--dust2);
   background: none;
@@ -616,7 +618,8 @@ function makeReverbIR(secs) {
   return buf;
 }
 
-function makeFXChain(fxName, snippetDur) {
+function makeFXChain(fxName, snippetDur, seed) {
+  if(!seed||seed.length<32) seed=Array.from({length:32},()=>0.5);
   if(!AC||!fxName) return null;
   // tail = extra time after last note for reverb/echo to decay
   const tail = (fxName==='HALL')?3.5 : (fxName==='ROOM')?2.0 : (fxName==='ECHO')?2.5 : 0.8;
@@ -645,7 +648,7 @@ function makeFXChain(fxName, snippetDur) {
       const shelf=AC.createBiquadFilter(); shelf.type='highshelf'; shelf.frequency.value=6500; shelf.gain.value=-4;
       const lo=AC.createBiquadFilter(); lo.type='lowshelf'; lo.frequency.value=180; lo.gain.value=2.5;
       const fltG=AC.createGain(); fltG.gain.value=0.9;
-      const lfo=AC.createOscillator(); lfo.frequency.value=R(0.5,1.2);
+      const lfo=AC.createOscillator(); lfo.frequency.value=SR(seed,0,0.5,1.2);
       const lfoAmt=AC.createGain(); lfoAmt.gain.value=0.05;
       lfo.connect(lfoAmt); lfoAmt.connect(fltG.gain);
       lfo.start(now); lfo.stop(killAt);
@@ -657,8 +660,8 @@ function makeFXChain(fxName, snippetDur) {
     case 'VINYL': {
       // Lo-fi filter + vinyl crackle that stops with the sound
       const inp=AC.createGain(); inp.gain.value=1;
-      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=R(3000,5000); lpf.Q.value=0.6;
-      const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=R(60,110); hp.Q.value=0.3;
+      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=SR(seed,0,3000,5000); lpf.Q.value=0.6;
+      const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=SR(seed,1,60,110); hp.Q.value=0.3;
       const outG=AC.createGain(); outG.gain.value=0.82;
       inp.connect(lpf); lpf.connect(hp); hp.connect(outG); outG.connect(masterOut);
       // Crackle: fixed-duration buffer, NOT looping — stops naturally
@@ -666,9 +669,9 @@ function makeFXChain(fxName, snippetDur) {
       const cLen=Math.floor(AC.sampleRate*cDur);
       const cBuf=AC.createBuffer(1,cLen,AC.sampleRate);
       const cd=cBuf.getChannelData(0);
-      for(let i=0;i<cLen;i++) cd[i]=Math.random()>0.997?(Math.random()*2-1)*R(0.2,0.6):0;
+      for(let i=0;i<cLen;i++) cd[i]=Math.random()>0.997?(Math.random()*2-1)*SR(seed,2,0.2,0.6):0;
       const crk=AC.createBufferSource(); crk.buffer=cBuf; crk.loop=false;
-      const crkG=AC.createGain(); crkG.gain.value=R(0.14,0.22);
+      const crkG=AC.createGain(); crkG.gain.value=SR(seed,3,0.14,0.22);
       // Fade crackle out smoothly at end
       crkG.gain.setValueAtTime(crkG.gain.value, now);
       crkG.gain.exponentialRampToValueAtTime(0.001, killAt-0.05);
@@ -681,8 +684,8 @@ function makeFXChain(fxName, snippetDur) {
 
     case 'ROOM': {
       const inp=AC.createGain(); inp.gain.value=0.88;
-      const conv=AC.createConvolver(); conv.buffer=makeReverbIR(R(0.7,1.8));
-      const wet=AC.createGain(); wet.gain.value=R(0.32,0.52);
+      const conv=AC.createConvolver(); conv.buffer=makeReverbIR(SR(seed,4,0.7,1.8));
+      const wet=AC.createGain(); wet.gain.value=SR(seed,5,0.32,0.52);
       const dry=AC.createGain(); dry.gain.value=0.78;
       // Fade wet out after input stops so tail decays naturally then disconnects
       wet.gain.setValueAtTime(wet.gain.value, now);
@@ -696,8 +699,8 @@ function makeFXChain(fxName, snippetDur) {
 
     case 'HALL': {
       const inp=AC.createGain(); inp.gain.value=0.82;
-      const conv=AC.createConvolver(); conv.buffer=makeReverbIR(R(2.2,3.5));
-      const wet=AC.createGain(); wet.gain.value=R(0.42,0.62);
+      const conv=AC.createConvolver(); conv.buffer=makeReverbIR(SR(seed,6,2.2,3.5));
+      const wet=AC.createGain(); wet.gain.value=SR(seed,7,0.42,0.62);
       const dry=AC.createGain(); dry.gain.value=0.58;
       const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=3800;
       wet.gain.setValueAtTime(wet.gain.value, now);
@@ -711,10 +714,10 @@ function makeFXChain(fxName, snippetDur) {
 
     case 'ECHO': {
       const inp=AC.createGain(); inp.gain.value=1;
-      const delayT=R(0.16,0.38);
+      const delayT=SR(seed,8,0.16,0.38);
       const dly=AC.createDelay(1.5); dly.delayTime.value=delayT;
-      const fb=AC.createGain(); fb.gain.value=R(0.28,0.52);
-      const wet=AC.createGain(); wet.gain.value=R(0.38,0.58);
+      const fb=AC.createGain(); fb.gain.value=SR(seed,9,0.28,0.52);
+      const wet=AC.createGain(); wet.gain.value=SR(seed,10,0.38,0.58);
       const dry=AC.createGain(); dry.gain.value=0.82;
       const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=3200;
       // Fade feedback out so echoes die
@@ -733,8 +736,8 @@ function makeFXChain(fxName, snippetDur) {
       const c=new Float32Array(256);
       for(let i=0;i<256;i++){const x=i/128-1; c[i]=Math.tanh(x*1.5)*0.82;}
       ws.curve=c;
-      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=R(1100,2600); lpf.Q.value=R(0.8,2.5);
-      const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=R(80,180);
+      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=SR(seed,11,1100,2600); lpf.Q.value=SR(seed,12,0.8,2.5);
+      const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=SR(seed,13,80,180);
       const outG=AC.createGain(); outG.gain.value=0.78;
       // Fixed-duration hiss — NOT looping
       const hLen=Math.floor(AC.sampleRate*totalLife);
@@ -742,7 +745,7 @@ function makeFXChain(fxName, snippetDur) {
       const hd=hBuf.getChannelData(0);
       for(let i=0;i<hLen;i++) hd[i]=(Math.random()*2-1);
       const hSrc=AC.createBufferSource(); hSrc.buffer=hBuf; hSrc.loop=false;
-      const hG=AC.createGain(); hG.gain.value=R(0.012,0.032);
+      const hG=AC.createGain(); hG.gain.value=SR(seed,14,0.012,0.032);
       // Fade hiss out
       hG.gain.setValueAtTime(hG.gain.value, now);
       hG.gain.exponentialRampToValueAtTime(0.001, killAt-0.05);
@@ -757,12 +760,12 @@ function makeFXChain(fxName, snippetDur) {
     case 'CRUSH': {
       const inp=AC.createGain(); inp.gain.value=1.4;
       const ws=AC.createWaveShaper();
-      const bits=Math.floor(R(3,6));
+      const bits=Math.floor(SR(seed,15,3,6));
       const steps=Math.pow(2,bits);
       const c=new Float32Array(1024);
       for(let i=0;i<1024;i++){const x=i/512-1; c[i]=Math.round(x*steps)/steps;}
       ws.curve=c;
-      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=R(1800,4500);
+      const lpf=AC.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=SR(seed,16,1800,4500);
       const outG=AC.createGain(); outG.gain.value=0.62;
       inp.connect(ws); ws.connect(lpf); lpf.connect(outG); outG.connect(masterOut);
       return {input:inp};
@@ -774,7 +777,7 @@ function makeFXChain(fxName, snippetDur) {
       const c=new Float32Array(512);
       for(let i=0;i<512;i++){const x=i/256-1; c[i]=Math.max(-0.68,Math.min(0.68,x*4.5));}
       ws.curve=c;
-      const filt=AC.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=R(500,1600); filt.Q.value=R(1,2.5);
+      const filt=AC.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=SR(seed,17,500,1600); filt.Q.value=SR(seed,18,1,2.5);
       const outG=AC.createGain(); outG.gain.value=0.42;
       inp.connect(ws); ws.connect(filt); filt.connect(outG); outG.connect(masterOut);
       return {input:inp};
@@ -785,10 +788,12 @@ function makeFXChain(fxName, snippetDur) {
 }
 
 // Returns the audio destination for a snippet — masterOut or an FX chain input
-// snippetDur = total seconds the snippet's audio will last (last event t + voice decay)
+// FX chain is rebuilt each call (nodes can't be reused), but params seeded from item.seed
 function getOut(item, snippetDur) {
   if(!item||!item.fxOn||!item.fx) return masterOut;
-  const chain=makeFXChain(item.fx, snippetDur||1.5);
+  if(item.type&&item.type.isDrum) return masterOut; // drums always dry
+  const seed = item.seed || [];
+  const chain = makeFXChain(item.fx, snippetDur||1.5, seed);
   return chain ? chain.input : masterOut;
 }
 
@@ -2757,14 +2762,14 @@ function stopSeq() {
 function schedLoop() {
   if(!playing) return;
   try {
-    while(nextBeat < AC.currentTime+0.1){
+    while(nextBeat < AC.currentTime+0.2){
       const stepToFire=curStep;
       try { fireStep(stepToFire, nextBeat); } catch(e){}
       curStep=(curStep+1)%steps;
       nextBeat+=stepDur();
     }
   } catch(e){}
-  schedTmr=setTimeout(schedLoop,18);
+  schedTmr=setTimeout(schedLoop,25);
 }
 
 function fireStep(globalStep, when) {
