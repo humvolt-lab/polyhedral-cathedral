@@ -171,8 +171,8 @@ html, body {
 
 .shape-svg-wrap svg {
   overflow: visible;
-  width: 76%;
-  height: 76%;
+  width: 58%;
+  height: 58%;
   transition: transform 0.15s;
 }
 .shape-cell:active .shape-svg-wrap svg { transform: scale(0.88); }
@@ -272,6 +272,40 @@ html, body {
 }
 .seq-sq svg { width: 72%; height: 72%; overflow: visible; }
 
+/* ─── AB ROW — one wave button per column, sits above each seq row ── */
+.ab-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  margin-bottom: 2px;
+}
+.ab-cell-btn {
+  width: 100%;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--dust2);
+  background: none;
+  cursor: pointer;
+  padding: 0 2px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+.ab-cell-btn svg {
+  width: 100%; height: 8px; overflow: visible; pointer-events: none;
+}
+.ab-cell-btn .ab-wave { stroke: var(--dust2); transition: stroke 0.12s; }
+.ab-cell-btn.ab-on {
+  border-color: var(--ink2);
+  background: rgba(80,120,200,0.10);
+}
+.ab-cell-btn.ab-on .ab-wave { stroke: var(--ink2); }
+.ab-cell-btn.ab-fire {
+  border-color: var(--ink);
+  background: rgba(26,22,18,0.12);
+}
+.ab-cell-btn.ab-fire .ab-wave { stroke: var(--ink); }
+
 /* FX row below sequencer */
 .fx-row {
   display: grid;
@@ -339,6 +373,78 @@ html, body {
   transition: opacity 0.15s;
 }
 .fx-label-pop.show { opacity: 1; }
+
+/* ─── AUTO BASS STRIP ───────────────────────────────────────── */
+.autobass-strip {
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--dust2);
+  border-radius: 3px;
+  background: transparent;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.autobass-strip.ab-active {
+  border-color: var(--ink2);
+  background: rgba(26,22,18,0.04);
+}
+.ab-toggle {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--dust2);
+  background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ab-toggle.on { border-color: var(--ink); background: var(--ink); }
+.ab-toggle svg { width: 12px; height: 12px; }
+.ab-toggle.on svg { stroke: var(--canvas); }
+.ab-info { flex: 1; min-width: 0; }
+.ab-label {
+  font-family: var(--mono); font-size: 7px; font-weight: 300;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--dust2);
+}
+.ab-mode {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--ink2); letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+.ab-mode.active { color: var(--ink); }
+/* LED strip removed — per-cell ab buttons used instead */
+/* char knob buttons */
+.ab-chars { display: flex; gap: 4px; }
+.ab-char-btn {
+  font-family: var(--mono); font-size: 7px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--dust2);
+  background: none; border: 1px solid var(--dust2);
+  border-radius: 2px; padding: 2px 5px; cursor: pointer;
+  transition: all 0.12s; -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.ab-char-btn.sel { border-color: var(--ink2); color: var(--ink2); background: rgba(26,22,18,0.06); }
+.ab-fuzz-btn {
+  font-family: var(--mono); font-size: 7px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--dust2);
+  background: none; border: 1px solid var(--dust2);
+  border-radius: 2px; padding: 2px 5px; cursor: pointer;
+  transition: all 0.12s; -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.ab-fuzz-btn.on { border-color: var(--ink); color: var(--ink); background: rgba(26,22,18,0.1); }
+.ab-rand-btn {
+  font-family: var(--mono); font-size: 9px;
+  color: var(--dust2); background: none;
+  border: 1px solid var(--dust2); border-radius: 2px;
+  padding: 2px 6px; cursor: pointer;
+  transition: all 0.12s; -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+}
+.ab-rand-btn:active { border-color: var(--ink); color: var(--ink); }
 
 /* ─── VOID ZONE ─────────────────────────────────────────────── */
 .void-zone {
@@ -519,14 +625,36 @@ html, body {
   </div>
 
   <!-- sequencer row A -->
+  <div class="ab-row" id="abRowA"></div>
   <div class="seq-grid" id="seqA"></div>
   <!-- fx row A -->
   <div class="fx-row" id="fxA"></div>
 
   <!-- sequencer row B -->
+  <div class="ab-row" id="abRowB"></div>
   <div class="seq-grid" id="seqB"></div>
   <!-- fx row B -->
   <div class="fx-row" id="fxB"></div>
+
+  <!-- auto bass -->
+  <div class="autobass-strip" id="abStrip">
+    <button class="ab-toggle" id="abToggle" aria-label="Toggle auto bass">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 9 Q3 3 6 6 Q9 9 10 3" stroke="var(--dust2)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="ab-info">
+      <div class="ab-label">auto bass</div>
+      <div class="ab-mode" id="abMode">off</div>
+    </div>
+    <div class="ab-chars">
+      <button class="ab-char-btn sel" data-char="sine" id="abSine">sine</button>
+      <button class="ab-char-btn" data-char="saw" id="abSaw">saw</button>
+      <button class="ab-char-btn" data-char="square" id="abSquare">sqr</button>
+    </div>
+    <button class="ab-fuzz-btn" id="abFuzz">fuzz</button>
+    <button class="ab-rand-btn" id="abRand">⟳</button>
+  </div>
 
   <!-- void -->
   <div class="void-zone">
@@ -577,11 +705,18 @@ let AC = null, masterOut = null, noiseBuf = null;
 function initAudio() {
   if (AC) return;
   AC = new (window.AudioContext || window.webkitAudioContext)();
+  // Compressor → limiter → output gain chain
   const comp = AC.createDynamicsCompressor();
-  comp.threshold.value = -14; comp.ratio.value = 4;
-  comp.attack.value = 0.003; comp.release.value = 0.12;
-  const gain = AC.createGain(); gain.gain.value = 0.72;
-  comp.connect(gain); gain.connect(AC.destination);
+  comp.threshold.value = -18; comp.ratio.value = 6;
+  comp.attack.value = 0.002; comp.release.value = 0.08;
+  comp.knee.value = 6;
+  // Hard limiter after comp catches anything that slips through
+  const limiter = AC.createDynamicsCompressor();
+  limiter.threshold.value = -3; limiter.ratio.value = 20;
+  limiter.attack.value = 0.001; limiter.release.value = 0.05;
+  limiter.knee.value = 0;
+  const gain = AC.createGain(); gain.gain.value = 0.65;
+  comp.connect(limiter); limiter.connect(gain); gain.connect(AC.destination);
   masterOut = comp;
   noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
   const nd = noiseBuf.getChannelData(0);
@@ -614,7 +749,7 @@ function noise(when, dur, ftype, ffreq, fq, vol, out) {
   const s=AC.createBufferSource(); s.buffer=noiseBuf;
   const f=AC.createBiquadFilter(); f.type=ftype; f.frequency.value=ffreq; f.Q.value=fq||1;
   const g=AC.createGain();
-  g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.001,when+dur);
+  g.gain.setValueAtTime(0.001,when); g.gain.linearRampToValueAtTime(vol,when+0.004); g.gain.exponentialRampToValueAtTime(0.001,when+dur);
   s.connect(f); f.connect(g); g.connect(out); s.start(when); s.stop(when+dur+0.05);
 }
 function osc(type, freq, when, dur, vol, envA, filtF, filtQ, out) {
@@ -635,7 +770,7 @@ function oscSweep(type, f0, f1, when, dur, vol, out) {
   out = out||masterOut;
   const o=AC.createOscillator(); o.type=type;
   o.frequency.setValueAtTime(f0,when); o.frequency.exponentialRampToValueAtTime(f1,when+dur*0.35);
-  const g=AC.createGain(); g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.001,when+dur);
+  const g=AC.createGain(); g.gain.setValueAtTime(0.001,when); g.gain.linearRampToValueAtTime(vol,when+0.004); g.gain.exponentialRampToValueAtTime(0.001,when+dur);
   o.connect(g); g.connect(out); o.start(when); o.stop(when+dur+0.05);
 }
 function R(lo,hi){ return lo+Math.random()*(hi-lo); } // random range helper
@@ -874,12 +1009,12 @@ function kick808(w, out) {
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
   o.frequency.setValueAtTime(155, w); o.frequency.exponentialRampToValueAtTime(38, w + 0.08);
-  g.gain.setValueAtTime(1.3, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.38);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.85,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.38);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.42);
   // Click transient: waveshaped triangle
   const o2 = AC.createOscillator(), g2 = AC.createGain(), ws = waveshaper(0.4);
   o2.type = 'triangle'; o2.frequency.value = 120;
-  g2.gain.setValueAtTime(0.5, w); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
+  g2.gain.setValueAtTime(0.001,w); g2.gain.linearRampToValueAtTime(0.35,w+0.003); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
   o2.connect(ws); ws.connect(g2); g2.connect(out); o2.start(w); o2.stop(w + 0.06);
 }
 
@@ -888,15 +1023,15 @@ function kick909(w, out) {
   // 909-style: faster sweep, noise click
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(200 + R(0,40), w);
+  o.frequency.setValueAtTime(200 + 20, w);
   o.frequency.exponentialRampToValueAtTime(40, w + 0.05);
-  g.gain.setValueAtTime(1.4, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.28);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.85,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.28);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.32);
   const nb = noiseBuffer(0.022), ns = AC.createBufferSource(); ns.buffer = nb;
   const ng = AC.createGain(), nhp = AC.createBiquadFilter();
   nhp.type = 'highpass'; nhp.frequency.value = 150;
-  ng.gain.setValueAtTime(R(0.3,0.5), w); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.022);
-  ns.connect(nhp); nhp.connect(ng); ng.connect(out); ns.start(w);
+  ng.gain.setValueAtTime(0.001,w); ng.gain.linearRampToValueAtTime(0.3,w+0.003); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.022);
+  ns.connect(nhp); nhp.connect(ng); ng.connect(out); ns.start(w); ns.stop(w+0.05);
 }
 
 function kickDeep(w, out) {
@@ -905,12 +1040,12 @@ function kickDeep(w, out) {
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
   o.frequency.setValueAtTime(90, w); o.frequency.exponentialRampToValueAtTime(28, w + 0.12);
-  g.gain.setValueAtTime(1.5, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.55);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.85,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.55);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.6);
   const o2 = AC.createOscillator(), g2 = AC.createGain();
   o2.type = 'sine'; o2.frequency.setValueAtTime(180, w);
   o2.frequency.exponentialRampToValueAtTime(55, w + 0.05);
-  g2.gain.setValueAtTime(0.6, w); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.06);
+  g2.gain.setValueAtTime(0.001,w); g2.gain.linearRampToValueAtTime(0.38,w+0.003); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.06);
   o2.connect(g2); g2.connect(out); o2.start(w); o2.stop(w + 0.08);
 }
 
@@ -919,13 +1054,13 @@ function kickClick(w, out) {
   // Thin TR-606 click: fast sweep + noise transient
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(R(260,320), w); o.frequency.exponentialRampToValueAtTime(50, w + 0.03);
-  g.gain.setValueAtTime(1.0, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.14);
+  o.frequency.setValueAtTime(290, w); o.frequency.exponentialRampToValueAtTime(50, w + 0.03);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.65,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.14);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.16);
   const nb = noiseBuffer(0.015), ns = AC.createBufferSource(); ns.buffer = nb;
   const ng = AC.createGain();
-  ng.gain.setValueAtTime(R(0.2,0.35), w); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.015);
-  ns.connect(ng); ng.connect(out); ns.start(w);
+  ng.gain.setValueAtTime(0.001,w); ng.gain.linearRampToValueAtTime(0.22,w+0.003); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.015);
+  ns.connect(ng); ng.connect(out); ns.start(w); ns.stop(w+0.04);
 }
 
 // ── SNARE ─────────────────────────────────────────────────────
@@ -936,13 +1071,13 @@ function snare808(w, out) {
   const nb = noiseBuffer(0.2), src = AC.createBufferSource(); src.buffer = nb;
   const g = AC.createGain(), bp = AC.createBiquadFilter();
   bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = 0.7;
-  g.gain.setValueAtTime(0.9, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.2);
-  src.connect(bp); bp.connect(g); g.connect(out); src.start(w);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.72,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.2);
+  src.connect(bp); bp.connect(g); g.connect(out); src.start(w); src.stop(w+0.25);
   // Tonal body
   const o = AC.createOscillator(), g2 = AC.createGain();
   o.type = 'triangle';
   o.frequency.setValueAtTime(220, w); o.frequency.exponentialRampToValueAtTime(100, w + 0.1);
-  g2.gain.setValueAtTime(0.6, w); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
+  g2.gain.setValueAtTime(0.001,w); g2.gain.linearRampToValueAtTime(0.48,w+0.003); g2.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
   o.connect(g2); g2.connect(out); o.start(w); o.stop(w + 0.12);
 }
 
@@ -951,14 +1086,14 @@ function snareRim(w, out) {
   out = out||masterOut;
   // Dry rimshot: square click + noise transient
   const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'square'; o.frequency.value = R(800,1000);
-  g.gain.setValueAtTime(R(0.3,0.45), w); g.gain.exponentialRampToValueAtTime(0.001, w + R(0.04,0.06));
+  o.type = 'square'; o.frequency.value = 900;
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.30,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.05);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.07);
   const nb = noiseBuffer(0.06), ns = AC.createBufferSource(); ns.buffer = nb;
   const ng = AC.createGain(), nbp = AC.createBiquadFilter();
-  nbp.type = 'bandpass'; nbp.frequency.value = R(3000,4500); nbp.Q.value = 1.5;
-  ng.gain.setValueAtTime(R(0.25,0.4), w); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.06);
-  ns.connect(nbp); nbp.connect(ng); ng.connect(out); ns.start(w);
+  nbp.type = 'bandpass'; nbp.frequency.value = 3750; nbp.Q.value = 1.5;
+  ng.gain.setValueAtTime(0.001,w); ng.gain.linearRampToValueAtTime(0.32,w+0.003); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.06);
+  ns.connect(nbp); nbp.connect(ng); ng.connect(out); ns.start(w); ns.stop(w+0.10);
 }
 
 function snareGhost(w, out) {
@@ -967,14 +1102,14 @@ function snareGhost(w, out) {
   const nb = noiseBuffer(0.1), src = AC.createBufferSource(); src.buffer = nb;
   const g = AC.createGain(), bp = AC.createBiquadFilter();
   bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 0.8;
-  g.gain.setValueAtTime(0.25, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
-  src.connect(bp); bp.connect(g); g.connect(out); src.start(w);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.25,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
+  src.connect(bp); bp.connect(g); g.connect(out); src.start(w); src.stop(w+0.12);
 }
 
 function snareFlam(w, out) {
   out = out||masterOut;
   snareGhost(w, out);
-  snare808(w + R(0.015, 0.025), out);
+  snare808(w + 0.02, out);
 }
 
 function fingerSnap(w, out) {
@@ -984,8 +1119,8 @@ function fingerSnap(w, out) {
     const nb = noiseBuffer(0.1), src = AC.createBufferSource(); src.buffer = nb;
     const g = AC.createGain(), bp = AC.createBiquadFilter();
     bp.type = 'bandpass'; bp.frequency.value = 1600 + i * 500; bp.Q.value = 1.2;
-    g.gain.setValueAtTime(0.8, w + d); g.gain.exponentialRampToValueAtTime(0.001, w + d + 0.09);
-    src.connect(bp); bp.connect(g); g.connect(out); src.start(w + d);
+    g.gain.setValueAtTime(0.001,w+d); g.gain.linearRampToValueAtTime(0.62,w+d+0.002); g.gain.exponentialRampToValueAtTime(0.001, w + d + 0.09);
+    src.connect(bp); bp.connect(g); g.connect(out); src.start(w + d); src.stop(w + d + 0.12);
   }
 }
 
@@ -997,7 +1132,7 @@ function hihatClosed(w, out) {
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = 'square'; o.frequency.value = f;
     const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
-    g.gain.setValueAtTime(0.12, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.055);
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.12,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.055);
     o.connect(hp); hp.connect(g); g.connect(out); o.start(w); o.stop(w + 0.07);
   });
 }
@@ -1008,7 +1143,7 @@ function hihatOpen(w, out) {
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = 'square'; o.frequency.value = f;
     const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
-    g.gain.setValueAtTime(0.10, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.45);
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.10,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.45);
     o.connect(hp); hp.connect(g); g.connect(out); o.start(w); o.stop(w + 0.5);
   });
 }
@@ -1019,7 +1154,7 @@ function hihatPedal(w, out) {
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = 'square'; o.frequency.value = f * 0.8;
     const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
-    g.gain.setValueAtTime(0.07, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.07);
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.07,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.07);
     o.connect(hp); hp.connect(g); g.connect(out); o.start(w); o.stop(w + 0.09);
   });
 }
@@ -1033,8 +1168,8 @@ function clapRoom(w, out) {
     const nb = noiseBuffer(0.1), src = AC.createBufferSource(); src.buffer = nb;
     const g = AC.createGain(), bp = AC.createBiquadFilter();
     bp.type = 'bandpass'; bp.frequency.value = 1600 + i * 500; bp.Q.value = 1.2;
-    g.gain.setValueAtTime(0.8, w + d); g.gain.exponentialRampToValueAtTime(0.001, w + d + 0.09);
-    src.connect(bp); bp.connect(g); g.connect(out); src.start(w + d);
+    g.gain.setValueAtTime(0.001,w+d); g.gain.linearRampToValueAtTime(0.62,w+d+0.002); g.gain.exponentialRampToValueAtTime(0.001, w + d + 0.09);
+    src.connect(bp); bp.connect(g); g.connect(out); src.start(w + d); src.stop(w + d + 0.12);
   }
 }
 
@@ -1043,29 +1178,29 @@ function clapElec(w, out) {
   const nb = noiseBuffer(0.065), src = AC.createBufferSource(); src.buffer = nb;
   const g = AC.createGain(), bp = AC.createBiquadFilter();
   bp.type = 'bandpass'; bp.frequency.value = 2000; bp.Q.value = 1.5;
-  g.gain.setValueAtTime(0.85, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.065);
-  src.connect(bp); bp.connect(g); g.connect(out); src.start(w);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.65,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.065);
+  src.connect(bp); bp.connect(g); g.connect(out); src.start(w); src.stop(w+0.09);
 }
 
 function clave(w, out) {
   out = out||masterOut;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(820 + R(0,400), w);
-  o.frequency.exponentialRampToValueAtTime(200, w + 0.07);
-  g.gain.setValueAtTime(1.0, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
-  o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.12);
+  o.frequency.setValueAtTime(900, w);
+  o.frequency.exponentialRampToValueAtTime(220, w + 0.055);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.38,w+0.005); g.gain.exponentialRampToValueAtTime(0.001, w + 0.07);
+  o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.09);
 }
 
 function cowbell(w, out) {
   out = out||masterOut;
-  const f1 = R(540,590), f2 = R(820,870);
+  const f1 = 565, f2 = 845;
   [f1, f2].forEach(f => {
     const o = AC.createOscillator(), g = AC.createGain();
     o.type = 'square'; o.frequency.value = f;
     const filt = AC.createBiquadFilter(); filt.type = 'bandpass';
-    filt.frequency.value = (f1+f2)/2; filt.Q.value = R(1.5,3);
-    g.gain.setValueAtTime(R(0.18,0.26), w); g.gain.exponentialRampToValueAtTime(0.001, w + R(0.28,0.45));
+    filt.frequency.value = (f1+f2)/2; filt.Q.value = 2.25;
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.22,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.36);
     o.connect(filt); filt.connect(g); g.connect(out); o.start(w); o.stop(w + 0.5);
   });
 }
@@ -1076,32 +1211,32 @@ function tomHi(w, out) {
   out = out||masterOut;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(R(200,240), w); o.frequency.exponentialRampToValueAtTime(R(65,85), w + 0.18);
-  g.gain.setValueAtTime(1.1, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.22);
+  o.frequency.setValueAtTime(220, w); o.frequency.exponentialRampToValueAtTime(75, w + 0.18);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.72,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.22);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.25);
   const nb = noiseBuffer(0.04), ns = AC.createBufferSource(); ns.buffer = nb;
-  const ng = AC.createGain(); ng.gain.setValueAtTime(0.2, w); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
-  ns.connect(ng); ng.connect(out); ns.start(w);
+  const ng = AC.createGain(); ng.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.2,w+0.003); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
+  ns.connect(ng); ng.connect(out); ns.start(w); ns.stop(w+0.06);
 }
 
 function tomMid(w, out) {
   out = out||masterOut;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(R(140,170), w); o.frequency.exponentialRampToValueAtTime(R(48,60), w + 0.22);
-  g.gain.setValueAtTime(1.2, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.28);
+  o.frequency.setValueAtTime(155, w); o.frequency.exponentialRampToValueAtTime(54, w + 0.22);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.72,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.28);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.32);
   const nb = noiseBuffer(0.04), ns = AC.createBufferSource(); ns.buffer = nb;
-  const ng = AC.createGain(); ng.gain.setValueAtTime(0.18, w); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
-  ns.connect(ng); ng.connect(out); ns.start(w);
+  const ng = AC.createGain(); ng.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.18,w+0.003); ng.gain.exponentialRampToValueAtTime(0.001, w + 0.04);
+  ns.connect(ng); ng.connect(out); ns.start(w); ns.stop(w+0.06);
 }
 
 function tomLo(w, out) {
   out = out||masterOut;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(R(90,110), w); o.frequency.exponentialRampToValueAtTime(R(32,42), w + 0.28);
-  g.gain.setValueAtTime(1.3, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.36);
+  o.frequency.setValueAtTime(100, w); o.frequency.exponentialRampToValueAtTime(37, w + 0.28);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.72,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.36);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.4);
 }
 
@@ -1111,9 +1246,9 @@ function shaker(w, out) {
   out = out||masterOut;
   const nb = noiseBuffer(0.07), src = AC.createBufferSource(); src.buffer = nb;
   const g = AC.createGain(), bp = AC.createBiquadFilter();
-  bp.type = 'bandpass'; bp.frequency.value = R(6000,8500); bp.Q.value = 2.5;
-  g.gain.setValueAtTime(0.5, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.07);
-  src.connect(bp); bp.connect(g); g.connect(out); src.start(w);
+  bp.type = 'bandpass'; bp.frequency.value = 7250; bp.Q.value = 2.5;
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.40,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.07);
+  src.connect(bp); bp.connect(g); g.connect(out); src.start(w); src.stop(w+0.10);
 }
 
 function tambourine(w, out) {
@@ -1121,18 +1256,18 @@ function tambourine(w, out) {
   shaker(w, out);
   const nb = noiseBuffer(0.14), src = AC.createBufferSource(); src.buffer = nb;
   const g = AC.createGain(), hp = AC.createBiquadFilter();
-  hp.type = 'highpass'; hp.frequency.value = R(6500,9000);
-  g.gain.setValueAtTime(0.32, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.14);
-  src.connect(hp); hp.connect(g); g.connect(out); src.start(w);
+  hp.type = 'highpass'; hp.frequency.value = 7750;
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.26,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.14);
+  src.connect(hp); hp.connect(g); g.connect(out); src.start(w); src.stop(w+0.18);
 }
 
 function crash(w, out) {
   out = out||masterOut;
   [4200, 6400, 8800, 11000, 13500].forEach(f => {
     const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'square'; o.frequency.value = f + R(0, 300);
+    o.type = 'square'; o.frequency.value = f + 150;
     const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 5000;
-    g.gain.setValueAtTime(0.07, w); g.gain.exponentialRampToValueAtTime(0.001, w + R(0.55,0.85));
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.07,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.7);
     o.connect(hp); hp.connect(g); g.connect(out); o.start(w); o.stop(w + 1.0);
   });
 }
@@ -1141,9 +1276,9 @@ function ride(w, out) {
   out = out||masterOut;
   [4200, 6400, 8800, 11000, 13500].forEach(f => {
     const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'square'; o.frequency.value = f + R(0, 300);
+    o.type = 'square'; o.frequency.value = f + 150;
     const hp = AC.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 5000;
-    g.gain.setValueAtTime(0.07, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.45);
+    g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.07,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.45);
     o.connect(hp); hp.connect(g); g.connect(out); o.start(w); o.stop(w + 0.5);
   });
 }
@@ -1152,9 +1287,9 @@ function percHit(w, freq, out) {
   out = out||masterOut;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(freq + R(0, freq * 0.3), w);
+  o.frequency.setValueAtTime(freq + freq * 0.15, w);
   o.frequency.exponentialRampToValueAtTime(freq * 0.4, w + 0.08);
-  g.gain.setValueAtTime(1.0, w); g.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
+  g.gain.setValueAtTime(0.001,w); g.gain.linearRampToValueAtTime(0.68,w+0.003); g.gain.exponentialRampToValueAtTime(0.001, w + 0.1);
   o.connect(g); g.connect(out); o.start(w); o.stop(w + 0.12);
 }
 
@@ -1178,7 +1313,7 @@ function playSynthVoice(freq, w, dur, wave, filterFreq, vol, out) {
   filt.frequency.setValueAtTime(filterFreq * 0.7, w);
   filt.frequency.exponentialRampToValueAtTime(filterFreq, w + 0.004);
   filt.frequency.exponentialRampToValueAtTime(filterFreq * 0.35, w + dur);
-  filt.Q.value = 3 + R(0, 4);
+  filt.Q.value = 5;
   // Amplitude envelope: fast attack, sustain, decay
   const env = AC.createGain();
   env.gain.setValueAtTime(0.0001, w);
@@ -1188,7 +1323,7 @@ function playSynthVoice(freq, w, dur, wave, filterFreq, vol, out) {
   // Sub oscillator mix
   const subG = AC.createGain(); subG.gain.value = 0.22;
   // LFO pitch wobble for analog warmth
-  const lfo = AC.createOscillator(); lfo.frequency.value = 3.5 + R(0, 2);
+  const lfo = AC.createOscillator(); lfo.frequency.value = 4.5;
   const lfoG = AC.createGain(); lfoG.gain.value = freq * 0.0015;
   lfo.connect(lfoG); lfoG.connect(osc.frequency);
   lfo.start(w); lfo.stop(w + dur + 0.05);
@@ -1204,16 +1339,16 @@ function playSynthVoice(freq, w, dur, wave, filterFreq, vol, out) {
 // Dual detuned saws — Moog-ish lead/arp
 function dualSaw(freq, w, dur, out, seed=[]) {
   if (!AC) return; out = out||masterOut;
-  const det = R(0.998, 1.004);
+  const det = 1.001;
   [1, det].forEach(d => {
     const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = freq * d;
-    const vcf = AC.createBiquadFilter(); vcf.type = 'lowpass'; vcf.Q.value = R(3, 8);
-    const c0 = R(600,1800), cPk = R(1200,3200), cEnd = R(300,900);
+    const vcf = AC.createBiquadFilter(); vcf.type = 'lowpass'; vcf.Q.value = 5.5;
+    const c0 = 1200, cPk = 2200, cEnd = 600;
     vcf.frequency.setValueAtTime(c0, w);
     vcf.frequency.exponentialRampToValueAtTime(cPk, w + 0.005);
-    vcf.frequency.exponentialRampToValueAtTime(cEnd, w + dur * R(0.35,0.6));
+    vcf.frequency.exponentialRampToValueAtTime(cEnd, w + dur * 0.475);
     const env = AC.createGain();
-    env.gain.setValueAtTime(R(0.28,0.4), w); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
+    env.gain.setValueAtTime(0.001,w); env.gain.linearRampToValueAtTime(0.34,w+0.004); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
     o.connect(vcf); vcf.connect(env); env.connect(out);
     o.start(w); o.stop(w + dur + 0.05);
   });
@@ -1223,16 +1358,16 @@ function dualSaw(freq, w, dur, out, seed=[]) {
 function dualSawBass(freq, w, dur, out, seed=[]) {
   if (!AC) return; out = out||masterOut;
   const f = freq * 0.5; // drop an octave
-  const det = R(0.997, 1.003);
+  const det = 1.0;
   [1, det].forEach(d => {
     const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * d;
-    const vcf = AC.createBiquadFilter(); vcf.type = 'lowpass'; vcf.Q.value = R(4, 10);
-    const c0 = R(400,1000), cPk = R(900,2200), cEnd = R(200,600);
+    const vcf = AC.createBiquadFilter(); vcf.type = 'lowpass'; vcf.Q.value = 7;
+    const c0 = 700, cPk = 1550, cEnd = 400;
     vcf.frequency.setValueAtTime(c0, w);
     vcf.frequency.exponentialRampToValueAtTime(cPk, w + 0.005);
-    vcf.frequency.exponentialRampToValueAtTime(cEnd, w + dur * R(0.3,0.55));
+    vcf.frequency.exponentialRampToValueAtTime(cEnd, w + dur * 0.425);
     const env = AC.createGain();
-    env.gain.setValueAtTime(R(0.55,0.75), w); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
+    env.gain.setValueAtTime(0.001,w); env.gain.linearRampToValueAtTime(0.52,w+0.004); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
     o.connect(vcf); vcf.connect(env); env.connect(out);
     o.start(w); o.stop(w + dur + 0.05);
   });
@@ -1246,10 +1381,10 @@ function darkPad(freq, w, dur, out, seed=[]) {
     o.type = i % 2 === 0 ? 'sawtooth' : 'square';
     o.frequency.value = freq * det;
     const lpf = AC.createBiquadFilter(); lpf.type = 'lowpass';
-    lpf.frequency.value = R(700, 2000); lpf.Q.value = R(0.4, 0.8);
+    lpf.frequency.value = 1350; lpf.Q.value = 0.6;
     const env = AC.createGain();
     env.gain.setValueAtTime(0.0001, w);
-    env.gain.linearRampToValueAtTime(R(0.07, 0.12), w + R(0.004, 0.012));
+    env.gain.linearRampToValueAtTime(0.095, w + 0.008);
     env.gain.exponentialRampToValueAtTime(0.001, w + dur);
     o.connect(lpf); lpf.connect(env); env.connect(out);
     o.start(w); o.stop(w + dur + 0.05);
@@ -1258,7 +1393,7 @@ function darkPad(freq, w, dur, out, seed=[]) {
 
 // Pulse lead — square wave through filter, tight and biting
 function pulseLead(freq, w, dur, out, seed=[]) {
-  playSynthVoice(freq, w, dur, 'square', R(600, 1800), R(0.48, 0.68), out);
+  playSynthVoice(freq, w, dur, 'square', 1200, 0.58, out);
 }
 
 // Pure sine sub bass — 808 melodic style with pitch envelope
@@ -1266,10 +1401,10 @@ function subBass(freq, w, dur, out, seed=[]) {
   if (!AC) return; out = out||masterOut;
   const f = freq * 0.5;
   const o = AC.createOscillator(); o.type = 'sine';
-  o.frequency.setValueAtTime(f * R(1.02, 1.05), w);
-  o.frequency.exponentialRampToValueAtTime(f, w + R(0.03, 0.07));
+  o.frequency.setValueAtTime(f * 1.035, w);
+  o.frequency.exponentialRampToValueAtTime(f, w + 0.05);
   const env = AC.createGain();
-  env.gain.setValueAtTime(R(0.7, 0.9), w); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
+  env.gain.setValueAtTime(0.001,w); env.gain.linearRampToValueAtTime(0.8,w+0.004); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
   o.connect(env); env.connect(out); o.start(w); o.stop(w + dur + 0.05);
 }
 
@@ -1277,10 +1412,10 @@ function subBass(freq, w, dur, out, seed=[]) {
 function boom808(freq, w, dur, out, seed=[]) {
   if (!AC) return; out = out||masterOut;
   const o = AC.createOscillator(); o.type = 'sine';
-  o.frequency.setValueAtTime(freq * R(1.04, 1.08), w);
-  o.frequency.exponentialRampToValueAtTime(freq, w + R(0.04, 0.09));
+  o.frequency.setValueAtTime(freq * 1.06, w);
+  o.frequency.exponentialRampToValueAtTime(freq, w + 0.065);
   const env = AC.createGain();
-  env.gain.setValueAtTime(R(0.65, 0.88), w); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
+  env.gain.setValueAtTime(0.001,w); env.gain.linearRampToValueAtTime(0.76,w+0.004); env.gain.exponentialRampToValueAtTime(0.001, w + dur);
   o.connect(env); env.connect(out); o.start(w); o.stop(w + dur + 0.05);
 }
 
@@ -1291,15 +1426,15 @@ const DRUM_SNIPPETS = [
   // ── KICK shape — randomly combines kick voice, density, ghost hits
   {
     id:'kick_snap', name:'Kick', isDrum:true, anim:'pulse',
-    generate(root,sc,sd,out) {
+    generate(root,sc,sd,out,seed=[]) {
       const kFns=[kick808,kick909,kickDeep,kickClick];
       // 30% chance of using a boom808 as main kick voice for that sub thud
-      const useBoom=R(0,1)<0.3;
-      const boomFreq=[40,50,55,60][Math.floor(R(0,4))]; // tuned sub frequencies
-      const k1=useBoom ? ((w,o)=>boom808(boomFreq,w,R(0.35,0.65),o||out)) : kFns[Math.floor(R(0,kFns.length))];
-      const k2=kFns[Math.floor(R(0,kFns.length))];
-      const snap=[fingerSnap,clave,snareRim][Math.floor(R(0,3))];
-      const pattern=Math.floor(R(0,10));
+      const useBoom=SR(seed,400,0,1)<0.3;
+      const boomFreq=[40,50,55,60][Math.floor(SR(seed,401,0,4))]; // tuned sub frequencies
+      const k1=useBoom ? ((w,o)=>boom808(boomFreq,w,SR(seed,402,0.35,0.65),o||out)) : kFns[Math.floor(SR(seed,403,0,kFns.length))];
+      const k2=kFns[Math.floor(SR(seed,404,0,kFns.length))];
+      const snap=[fingerSnap,clave,snareRim][Math.floor(SR(seed,405,0,3))];
+      const pattern=Math.floor(SR(seed,406,0,10));
       const rhythms=[
         ()=>[{t:0,fn:w=>k1(w,out)},{t:sd,fn:w=>snap(w,out)}],
         ()=>[{t:0,fn:w=>k1(w,out)},{t:sd*0.5,fn:w=>k2(w,out)},{t:sd,fn:w=>snap(w,out)}],
@@ -1310,8 +1445,8 @@ const DRUM_SNIPPETS = [
         ()=>[{t:0,fn:w=>k1(w,out)},{t:sd*0.25,fn:w=>k2(w,out)},{t:sd*0.75,fn:w=>snap(w,out)},{t:sd,fn:w=>k1(w,out)}],
         ()=>[{t:0,fn:w=>k1(w,out)},{t:sd*2,fn:w=>k2(w,out)},{t:sd*2.5,fn:w=>snap(w,out)}],
         // two boom-heavy patterns
-        ()=>[{t:0,fn:w=>{kick808(w,out);boom808(boomFreq,w,R(0.4,0.7),out);}},{t:sd,fn:w=>snap(w,out)}],
-        ()=>[{t:0,fn:w=>boom808(boomFreq,w,R(0.5,0.8),out)},{t:sd*0.5,fn:w=>k2(w,out)},{t:sd*1.5,fn:w=>boom808(boomFreq*R(0.9,1.1),w,R(0.3,0.5),out)}],
+        ()=>[{t:0,fn:w=>{kick808(w,out);boom808(boomFreq,w,SR(seed,407,0.4,0.7),out);}},{t:sd,fn:w=>snap(w,out)}],
+        ()=>[{t:0,fn:w=>boom808(boomFreq,w,SR(seed,408,0.5,0.8),out)},{t:sd*0.5,fn:w=>k2(w,out)},{t:sd*1.5,fn:w=>boom808(boomFreq*SR(seed,409,0.9,1.1),w,SR(seed,410,0.3,0.5),out)}],
       ];
       return rhythms[pattern]();
     }
@@ -1319,17 +1454,17 @@ const DRUM_SNIPPETS = [
   // ── HAT shape — hi-hat density, open/close combos, swing amounts
   {
     id:'hat_groove', name:'Hats', isDrum:true, anim:'drift',
-    generate(root,sc,sd,out) {
-      const s=R(0.015,0.065);
-      const density=Math.floor(R(0,7));
+    generate(root,sc,sd,out,seed=[]) {
+      const s=SR(seed,411,0.015,0.065);
+      const density=Math.floor(SR(seed,412,0,7));
       const hatFns=(i)=>SR(seed,60+i,0,1)<0.7?hihatClosed:hihatOpen;
       const patterns=[
         ()=>[{t:0,fn:w=>hihatClosed(w,out)},{t:sw(sd*0.5,s,seed,50),fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>hihatClosed(w,out)}],
         ()=>[{t:0,fn:w=>hihatClosed(w,out)},{t:sd*0.25,fn:w=>hihatClosed(w,out)},{t:sw(sd*0.5,s,seed,51),fn:w=>hihatOpen(w,out)},{t:sd*0.75,fn:w=>hihatClosed(w,out)}],
         ()=>[{t:0,fn:w=>hihatOpen(w,out)},{t:sd*0.333,fn:w=>hihatClosed(w,out)},{t:sd*0.667,fn:w=>hihatClosed(w,out)}],
-        ()=>{const e=sd/3;return[{t:0,fn:w=>hihatClosed(w,out)},{t:e,fn:w=>hihatClosed(w,out)},{t:sw(e*2,s,seed,52),fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>hihatClosed(w,out)},{t:sd+e,fn:w=>hihatPedal(w,out)}];},
+        ()=>{const e=sd/3;return[{t:0,fn:w=>hihatClosed(w,out)},{t:sw(e*2,s,seed,52),fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>hihatClosed(w,out)}];},
         ()=>[{t:0,fn:w=>hihatPedal(w,out)},{t:sw(sd*0.5,s,seed,53),fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>hihatClosed(w,out)},{t:sd*1.5,fn:w=>hihatClosed(w,out)}],
-        ()=>{const e=sd/4;return[{t:0,fn:w=>hihatClosed(w,out)},{t:e,fn:w=>hihatClosed(w,out)},{t:e*2,fn:w=>hihatClosed(w,out)},{t:sw(e*3,s,seed,54),fn:w=>hihatOpen(w,out)},{t:e*4,fn:w=>hihatClosed(w,out)}];},
+        ()=>{const e=sd/4;return[{t:0,fn:w=>hihatClosed(w,out)},{t:e*2,fn:w=>hihatClosed(w,out)},{t:sw(e*3,s,seed,54),fn:w=>hihatOpen(w,out)}];},
         ()=>[{t:0,fn:w=>hihatOpen(w,out)},{t:sw(sd*0.25,s,seed,55),fn:w=>hihatClosed(w,out)},{t:sd*0.75,fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>hihatOpen(w,out)}],
       ];
       return patterns[density]();
@@ -1338,24 +1473,24 @@ const DRUM_SNIPPETS = [
   // ── FULL shape — kick+snare+hat combos, multiple groove feels
   {
     id:'khs', name:'Full', isDrum:true, anim:'pulse',
-    generate(root,sc,sd,out) {
-      const s=R(0.01,0.05);
+    generate(root,sc,sd,out,seed=[]) {
+      const s=SR(seed,413,0.01,0.05);
       const kFns=[kick808,kick909,kickDeep];
-      const useBoom=R(0,1)<0.25;
-      const boomFreq=[40,50,55][Math.floor(R(0,3))];
-      const k=useBoom ? ((w,o)=>{kick808(w,o);boom808(boomFreq,w,R(0.35,0.6),o||out);}) : kFns[Math.floor(R(0,kFns.length))];
+      const useBoom=SR(seed,414,0,1)<0.25;
+      const boomFreq=[40,50,55][Math.floor(SR(seed,415,0,3))];
+      const k=useBoom ? ((w,o)=>{kick808(w,o);boom808(boomFreq,w,SR(seed,416,0.35,0.6),o||out);}) : kFns[Math.floor(SR(seed,417,0,kFns.length))];
       const snFns=[snare808,snareRim,snareFlam];
-      const sn=snFns[Math.floor(R(0,snFns.length))];
-      const feel=Math.floor(R(0,8));
+      const sn=snFns[Math.floor(SR(seed,418,0,snFns.length))];
+      const feel=Math.floor(SR(seed,419,0,8));
       const grooves=[
         ()=>[{t:0,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sw(sd*0.5,s,seed,56),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>{sn(w,out);hihatClosed(w,out);}}],
         ()=>[{t:0,fn:w=>k(w,out)},{t:sd*0.333,fn:w=>hihatClosed(w,out)},{t:sd*0.667,fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)}],
         ()=>[{t:0,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sw(sd*0.25,s,seed,57),fn:w=>hihatClosed(w,out)},{t:sd*0.5,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sd,fn:w=>sn(w,out)}],
         ()=>{const tr=sd/3;return[{t:0,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sw(tr*2,s,seed,58),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>{sn(w,out);hihatClosed(w,out);}},{t:sd+tr*2,fn:w=>hihatOpen(w,out)}];},
-        ()=>[{t:0,fn:w=>k(w,out)},{t:sd*0.5,fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>sn(w,out)},{t:sd*1.25,fn:w=>snareGhost(w,out)},{t:sd*1.5,fn:w=>hihatClosed(w,out)}],
-        ()=>[{t:0,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sd*0.375,fn:w=>snareGhost(w,out)},{t:sw(sd*0.75,s,seed,59),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)}],
-        ()=>[{t:0,fn:w=>k(w,out)},{t:sd*0.25,fn:w=>k(w,out)},{t:sd*0.5,fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)},{t:sd*1.5,fn:w=>hihatOpen(w,out)}],
-        ()=>[{t:0,fn:w=>{k(w,out);hihatClosed(w,out);}},{t:sw(sd*0.667,s,seed,60),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)},{t:sd*1.333,fn:w=>snareGhost(w,out)},{t:sd*1.667,fn:w=>hihatClosed(w,out)}],
+        ()=>[{t:0,fn:w=>k(w,out)},{t:sd*0.5,fn:w=>hihatOpen(w,out)},{t:sd,fn:w=>sn(w,out)}],
+        ()=>[{t:0,fn:w=>k(w,out)},{t:sw(sd*0.75,s,seed,59),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)}],
+        ()=>[{t:0,fn:w=>k(w,out)},{t:sd*0.5,fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)}],
+        ()=>[{t:0,fn:w=>k(w,out)},{t:sw(sd*0.667,s,seed,60),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>sn(w,out)},{t:sd*1.5,fn:w=>snareGhost(w,out)}],
       ];
       return grooves[feel]();
     }
@@ -1368,10 +1503,14 @@ const DRUM_SNIPPETS = [
       const s=SR(seed,1,0.01,0.04);
       const v=Math.floor(SR(seed,2,0,4));
       const patterns=[
-        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.375,fn:w=>clave(w,out)},{t:sd*0.75,fn:w=>clave(w,out)},{t:sd*1.25,fn:w=>clave(w,out)},{t:sw(sd*1.667,s,seed,70),fn:w=>clave(w,out)}],
-        ()=>[{t:0,fn:w=>clave(w,out)},{t:sw(sd*0.417,s,seed,71),fn:w=>clave(w,out)},{t:sd*0.833,fn:w=>clave(w,out)},{t:sd*1.25,fn:w=>clave(w,out)},{t:sw(sd*1.75,s,seed,72),fn:w=>clave(w,out)}],
-        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.375,fn:w=>cowbell(w,out)},{t:sd*0.75,fn:w=>clave(w,out)},{t:sd*1.5,fn:w=>clave(w,out)}],
-        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.5,fn:w=>shaker(w,out)},{t:sw(sd*1.0,s,seed,73),fn:w=>clave(w,out)},{t:sd*1.5,fn:w=>shaker(w,out)},{t:sd*1.75,fn:w=>clave(w,out)}],
+        // sparse son clave: 3 hits with breathing room
+        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.75,fn:w=>clave(w,out)},{t:sw(sd*1.5,s,seed,70),fn:w=>clave(w,out)}],
+        // rumba clave feel: 3 hits over kick
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sd*0.417,fn:w=>clave(w,out)},{t:sw(sd*1.0,s,seed,71),fn:w=>clave(w,out)},{t:sd*1.5,fn:w=>clave(w,out)}],
+        // clave accent over shaker
+        ()=>[{t:0,fn:w=>shaker(w,out)},{t:sd*0.375,fn:w=>{shaker(w,out);clave(w,out);}},{t:sd*0.75,fn:w=>shaker(w,out)},{t:sd*1.5,fn:w=>clave(w,out)}],
+        // clave + shaker interlock, sparser
+        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.5,fn:w=>shaker(w,out)},{t:sw(sd*1.25,s,seed,73),fn:w=>clave(w,out)},{t:sd*1.75,fn:w=>shaker(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1383,10 +1522,14 @@ const DRUM_SNIPPETS = [
       const s=SR(seed,1,0.01,0.05);
       const v=Math.floor(SR(seed,2,0,4));
       const patterns=[
-        ()=>[{t:0,fn:w=>cowbell(w,out)},{t:sw(sd*0.5,s,seed,74),fn:w=>cowbell(w,out)},{t:sd,fn:w=>cowbell(w,out)},{t:sw(sd*1.333,s,seed,75),fn:w=>cowbell(w,out)}],
-        ()=>[{t:0,fn:w=>cowbell(w,out)},{t:sd*0.333,fn:w=>clave(w,out)},{t:sd*0.667,fn:w=>cowbell(w,out)},{t:sd,fn:w=>clave(w,out)},{t:sw(sd*1.5,s,seed,76),fn:w=>cowbell(w,out)}],
-        ()=>[{t:0,fn:w=>{cowbell(w,out);kick808(w,out);}},{t:sw(sd*0.75,s,seed,77),fn:w=>cowbell(w,out)},{t:sd,fn:w=>{cowbell(w,out);snare808(w,out);}}],
-        ()=>[{t:0,fn:w=>cowbell(w,out)},{t:sd*0.25,fn:w=>cowbell(w,out)},{t:sd*0.5,fn:w=>cowbell(w,out)},{t:sd*0.75,fn:w=>cowbell(w,out)},{t:sd,fn:w=>cowbell(w,out)}],
+        // cowbell as accent on the 2 and 4, with kick and clave
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.5,s,seed,74),fn:w=>clave(w,out)},{t:sd,fn:w=>{kick808(w,out);cowbell(w,out);}},{t:sw(sd*1.5,s,seed,75),fn:w=>clave(w,out)}],
+        // cowbell punctuating a clave pattern
+        ()=>[{t:0,fn:w=>clave(w,out)},{t:sd*0.333,fn:w=>clave(w,out)},{t:sd*0.667,fn:w=>cowbell(w,out)},{t:sd,fn:w=>clave(w,out)},{t:sw(sd*1.5,s,seed,76),fn:w=>clave(w,out)}],
+        // kick+snare with cowbell accent
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.5,s,seed,77),fn:w=>hihatClosed(w,out)},{t:sd,fn:w=>snare808(w,out)},{t:sw(sd*1.5,s,seed,78),fn:w=>cowbell(w,out)}],
+        // sparse cowbell over shaker groove
+        ()=>[{t:0,fn:w=>shaker(w,out)},{t:sd*0.25,fn:w=>shaker(w,out)},{t:sd*0.5,fn:w=>{shaker(w,out);cowbell(w,out);}},{t:sd*0.75,fn:w=>shaker(w,out)},{t:sd,fn:w=>shaker(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1558,10 +1701,10 @@ const DRUM_SNIPPETS = [
       const s=SR(seed,1,0.005,0.025);
       const v=Math.floor(SR(seed,2,0,4));
       const patterns=[
-        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sd*0.25,fn:w=>shaker(w,out)},{t:sw(sd*0.333,s,seed,159),fn:w=>clave(w,out)},{t:sd*0.5,fn:w=>shaker(w,out)},{t:sd*0.667,fn:w=>snareRim(w,out)},{t:sd*0.75,fn:w=>shaker(w,out)},{t:sd,fn:w=>kick808(w,out)},{t:sw(sd*1.083,s,seed,160),fn:w=>clave(w,out)}],
-        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.167,s,seed,161),fn:w=>tomHi(w,out)},{t:sd*0.333,fn:w=>shaker(w,out)},{t:sd*0.5,fn:w=>snare808(w,out)},{t:sw(sd*0.667,s,seed,162),fn:w=>tomMid(w,out)},{t:sd*0.833,fn:w=>shaker(w,out)},{t:sd,fn:w=>cowbell(w,out)}],
-        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sd*0.25,fn:w=>tambourine(w,out)},{t:sd*0.5,fn:w=>snareRim(w,out)},{t:sd*0.625,fn:w=>tambourine(w,out)},{t:sd*0.75,fn:w=>clave(w,out)},{t:sd,fn:w=>kick808(w,out)},{t:sw(sd*1.25,s,seed,163),fn:w=>tambourine(w,out)}],
-        ()=>[{t:0,fn:w=>{kick808(w,out);shaker(w,out);}},{t:sw(sd*0.375,s,seed,164),fn:w=>tomHi(w,out)},{t:sd*0.5,fn:w=>{shaker(w,out);snareRim(w,out);}},{t:sw(sd*0.875,s,seed,165),fn:w=>tomLo(w,out)},{t:sd,fn:w=>shaker(w,out)}],
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.333,s,seed,159),fn:w=>clave(w,out)},{t:sd*0.667,fn:w=>snareRim(w,out)},{t:sd,fn:w=>shaker(w,out)}],
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.333,s,seed,161),fn:w=>tomHi(w,out)},{t:sd*0.667,fn:w=>snare808(w,out)},{t:sd,fn:w=>cowbell(w,out)}],
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sd*0.5,fn:w=>snareRim(w,out)},{t:sd*0.75,fn:w=>clave(w,out)},{t:sd,fn:w=>tambourine(w,out)}],
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.375,s,seed,164),fn:w=>tomHi(w,out)},{t:sd*0.75,fn:w=>snareRim(w,out)},{t:sd,fn:w=>shaker(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1573,10 +1716,10 @@ const DRUM_SNIPPETS = [
       const s=SR(seed,1,0.002,0.01);
       const v=Math.floor(SR(seed,2,0,4));
       const patterns=[
-        ()=>[{t:0,fn:w=>kick909(w,out)},{t:sw(sd*0.083,s,seed,166),fn:w=>kickClick(w,out)},{t:sd*0.25,fn:w=>clapElec(w,out)},{t:sw(sd*0.333,s,seed,167),fn:w=>kickClick(w,out)},{t:sd*0.5,fn:w=>kick909(w,out)},{t:sd*0.75,fn:w=>clapElec(w,out)},{t:sw(sd*0.917,s,seed,168),fn:w=>kickClick(w,out)}],
+        ()=>[{t:0,fn:w=>kick909(w,out)},{t:sw(sd*0.25,s,seed,166),fn:w=>kickClick(w,out)},{t:sd*0.5,fn:w=>clapElec(w,out)},{t:sd*0.75,fn:w=>kick909(w,out)}],
         ()=>[{t:0,fn:w=>kick909(w,out)},{t:sw(sd*0.5,s,seed,169),fn:w=>clapElec(w,out)},{t:sw(sd*0.583,s,seed,170),fn:w=>clapElec(w,out)},{t:sd,fn:w=>kick909(w,out)},{t:sw(sd*1.083,s,seed,171),fn:w=>kickClick(w,out)}],
-        ()=>[{t:0,fn:w=>{kick909(w,out);clapElec(w,out);}},{t:sw(sd*0.167,s,seed,172),fn:w=>kickClick(w,out)},{t:sd*0.5,fn:w=>clapElec(w,out)},{t:sw(sd*0.667,s,seed,173),fn:w=>kick909(w,out)},{t:sw(sd*0.75,s,seed,174),fn:w=>kickClick(w,out)}],
-        ()=>[{t:0,fn:w=>kick909(w,out)},{t:sw(sd*0.25,s,seed,175),fn:w=>kickClick(w,out)},{t:sw(sd*0.417,s,seed,176),fn:w=>clapElec(w,out)},{t:sd*0.5,fn:w=>kick909(w,out)},{t:sw(sd*0.583,s,seed,177),fn:w=>kickClick(w,out)},{t:sw(sd*0.833,s,seed,178),fn:w=>clapElec(w,out)}],
+        ()=>[{t:0,fn:w=>kick909(w,out)},{t:sd*0.5,fn:w=>clapElec(w,out)},{t:sw(sd*0.75,s,seed,173),fn:w=>kick909(w,out)}],
+        ()=>[{t:0,fn:w=>kick909(w,out)},{t:sw(sd*0.417,s,seed,176),fn:w=>clapElec(w,out)},{t:sd*0.5,fn:w=>kick909(w,out)},{t:sw(sd*0.833,s,seed,178),fn:w=>clapElec(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1588,11 +1731,11 @@ const DRUM_SNIPPETS = [
       const s=SR(seed,1,0.01,0.04);
       const v=Math.floor(SR(seed,2,0,5));
       const patterns=[
-        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sw(sd*0.333,s,seed,179),fn:w=>snareRim(w,out)},{t:sd*0.667,fn:w=>snareRim(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
-        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.25,s,seed,180),fn:w=>snareRim(w,out)},{t:sd*0.5,fn:w=>snareRim(w,out)},{t:sw(sd*0.75,s,seed,181),fn:w=>kick808(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
-        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sd*0.5,fn:w=>clave(w,out)},{t:sw(sd*0.75,s,seed,182),fn:w=>snareRim(w,out)},{t:sd,fn:w=>snareRim(w,out)},{t:sw(sd*1.25,s,seed,183),fn:w=>clave(w,out)}],
+        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sw(sd*0.667,s,seed,179),fn:w=>snareRim(w,out)},{t:sd*1.5,fn:w=>snareRim(w,out)}],
+        ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.5,s,seed,180),fn:w=>snareRim(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
+        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sd*0.5,fn:w=>clave(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
         ()=>[{t:0,fn:w=>{snareRim(w,out);kick808(w,out);}},{t:sw(sd*0.417,s,seed,184),fn:w=>snareRim(w,out)},{t:sd*0.833,fn:w=>snareRim(w,out)},{t:sd,fn:w=>kick808(w,out)}],
-        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sw(sd*0.167,s,seed,185),fn:w=>fingerSnap(w,out)},{t:sd*0.5,fn:w=>snareRim(w,out)},{t:sw(sd*0.667,s,seed,186),fn:w=>fingerSnap(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
+        ()=>[{t:0,fn:w=>snareRim(w,out)},{t:sw(sd*0.5,s,seed,185),fn:w=>fingerSnap(w,out)},{t:sd,fn:w=>snareRim(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1605,9 +1748,9 @@ const DRUM_SNIPPETS = [
       const v=Math.floor(SR(seed,2,0,4));
       const patterns=[
         ()=>[{t:0,fn:w=>{clapRoom(w,out);clapElec(w,out);}},{t:sw(sd*0.5,s,seed,187),fn:w=>clapRoom(w,out)},{t:sd,fn:w=>{clapRoom(w,out);clapElec(w,out);}},{t:sw(sd*1.5,s,seed,188),fn:w=>clapElec(w,out)}],
-        ()=>[{t:0,fn:w=>clapElec(w,out)},{t:sw(sd*0.25,s,seed,189),fn:w=>clapElec(w,out)},{t:sw(sd*0.5,s,seed,190),fn:w=>clapRoom(w,out)},{t:sd,fn:w=>clapElec(w,out)},{t:sw(sd*1.25,s,seed,191),fn:w=>clapElec(w,out)}],
+        ()=>[{t:0,fn:w=>clapElec(w,out)},{t:sw(sd*0.5,s,seed,190),fn:w=>clapRoom(w,out)},{t:sd,fn:w=>clapElec(w,out)}],
         ()=>[{t:0,fn:w=>kick808(w,out)},{t:sw(sd*0.5,s,seed,192),fn:w=>{clapRoom(w,out);snare808(w,out);}},{t:sd,fn:w=>kick808(w,out)},{t:sw(sd*1.5,s,seed,193),fn:w=>{clapRoom(w,out);clapElec(w,out);}}],
-        ()=>[{t:0,fn:w=>clapRoom(w,out)},{t:sw(sd*0.375,s,seed,194),fn:w=>clapElec(w,out)},{t:sw(sd*0.417,s,seed,195),fn:w=>clapElec(w,out)},{t:sd*0.75,fn:w=>clapRoom(w,out)},{t:sw(sd*1.125,s,seed,196),fn:w=>clapElec(w,out)}],
+        ()=>[{t:0,fn:w=>clapRoom(w,out)},{t:sw(sd*0.5,s,seed,194),fn:w=>clapElec(w,out)},{t:sd,fn:w=>clapRoom(w,out)}],
       ];
       return patterns[v]();
     }
@@ -1615,10 +1758,10 @@ const DRUM_SNIPPETS = [
   // ── SNARE shape — snare textures, ghost combos, rim shots, flams
   {
     id:'snare_break', name:'Snare', isDrum:true, anim:'rock',
-    generate(root,sc,sd,out) {
+    generate(root,sc,sd,out,seed=[]) {
       const snFns=[snare808,snareRim,snareFlam];
-      const sn=snFns[Math.floor(R(0,snFns.length))];
-      const feel=Math.floor(R(0,7));
+      const sn=snFns[Math.floor(SR(seed,420,0,snFns.length))];
+      const feel=Math.floor(SR(seed,421,0,7));
       const breaks=[
         ()=>[{t:0,fn:w=>sn(w,out)},{t:sd*0.667,fn:w=>snareGhost(w,out)}],
         ()=>[{t:0,fn:w=>sn(w,out)},{t:sd*0.333,fn:w=>snareGhost(w,out)},{t:sd*0.667,fn:w=>snareGhost(w,out)}],
@@ -1643,7 +1786,7 @@ const MELODIC_SNIPPETS = [
       const pats=[[0,4,7],[0,3,7],[0,2,5,7],[0,4,7,9],[0,3,5,9],[0,4,9,7]];
       const pat=pats[Math.floor(SR(seed,25,0,pats.length))];
       const n=3+Math.floor(SR(seed,20,0,pat.length));
-      const step=SR(seed,21,0.16,0.30)*sd;
+      const step=SR(seed,21,0.30,0.52)*sd;
       const dur=step*SR(seed,22,0.7,1.1); // notes slightly overlap — legato
       const swing=SR(seed,23,0.01,0.05);
       return Array.from({length:n},(_,i)=>({
@@ -1658,7 +1801,7 @@ const MELODIC_SNIPPETS = [
       const pats=[[7,4,0],[7,3,0],[9,7,4,0],[7,5,3,0],[9,5,3,0]];
       const pat=pats[Math.floor(SR(seed,25,0,pats.length))];
       const n=3+Math.floor(SR(seed,20,0,pat.length));
-      const step=SR(seed,21,0.17,0.29)*sd;
+      const step=SR(seed,21,0.32,0.52)*sd;
       const dur=step*SR(seed,22,0.7,1.1);
       const swing=SR(seed,23,0.01,0.05);
       return Array.from({length:n},(_,i)=>({
@@ -1673,7 +1816,7 @@ const MELODIC_SNIPPETS = [
       const bases=[[0,4,7,4],[0,3,7,3],[0,2,5,2],[0,4,9,4],[0,5,7,5]];
       const pat=bases[Math.floor(SR(seed,25,0,bases.length))];
       const n=4+Math.floor(SR(seed,20,0,4));
-      const step=SR(seed,21,0.15,0.27)*sd;
+      const step=SR(seed,21,0.28,0.48)*sd;
       const dur=step*SR(seed,22,0.8,1.2);
       const swing=SR(seed,23,0.02,0.06);
       return Array.from({length:n},(_,i)=>({
@@ -1703,7 +1846,7 @@ const MELODIC_SNIPPETS = [
       const pairs=[[0,7],[0,5],[0,4],[2,7],[3,7],[0,9]];
       const [d1,d2]=pairs[Math.floor(SR(seed,25,0,pairs.length))];
       const n=2+Math.floor(SR(seed,20,0,3));
-      const step=SR(seed,21,0.22,0.45)*sd;
+      const step=SR(seed,21,0.38,0.68)*sd;
       const dur=step*SR(seed,22,0.75,1.15);
       const swing=SR(seed,23,0.01,0.04);
       const degs=[d1,d2,d1,d2,d1,d2].slice(0,n);
@@ -1759,7 +1902,7 @@ const MELODIC_SNIPPETS = [
       const rhythms=[[0,0.5,1],[0,0.333,0.667,1],[0,0.25,0.75,1],[0,0.5,1,1.5]];
       const rhy=rhythms[Math.floor(SR(seed,25,0,rhythms.length))];
       const degs=[0,0,5,7,3,0];
-      const dur=SR(seed,20,0.18,0.32)*sd;
+      const dur=SR(seed,20,0.32,0.58)*sd;
       return rhy.map((t,i)=>({
         t:t*sd,
         fn:w=>dualSawBass(scaleTone(root,sc,degs[i%degs.length]),w,dur,out,seed)
@@ -1815,7 +1958,7 @@ const MELODIC_SNIPPETS = [
       const mels=[[0,2,4,3],[4,3,2,0],[0,3,4,2],[2,4,5,4],[0,2,5,4]];
       const mel=mels[Math.floor(SR(seed,25,0,mels.length))];
       const n=2+Math.floor(SR(seed,20,0,mel.length-1));
-      const step=SR(seed,21,0.22,0.38)*sd;
+      const step=SR(seed,21,0.38,0.62)*sd;
       const dur=step*SR(seed,22,0.7,1.05);
       return mel.slice(0,n).map((d,i)=>({
         t:i*step,
@@ -1828,7 +1971,7 @@ const MELODIC_SNIPPETS = [
       const pats=[[0,4,7,4],[0,3,7,3],[0,5,7,5],[0,2,5,7],[4,7,9,7]];
       const pat=pats[Math.floor(SR(seed,25,0,pats.length))];
       const n=3+Math.floor(SR(seed,20,0,pat.length));
-      const step=SR(seed,21,0.18,0.3)*sd;
+      const step=SR(seed,21,0.32,0.55)*sd;
       const dur=step*SR(seed,22,0.7,1.1);
       const swing=SR(seed,23,0.01,0.05);
       return Array.from({length:n},(_,i)=>({
@@ -1863,7 +2006,7 @@ const MELODIC_SNIPPETS = [
     generate(root,sc,sd,out,seed=[]) {
       const steps=Math.floor(SR(seed,20,3,7));
       const degs=[0,0,3,0,7,5,0,3];
-      const step=SR(seed,21,0.12,0.22)*sd;
+      const step=SR(seed,21,0.24,0.42)*sd;
       const dur=step*SR(seed,22,0.55,0.85);
       return Array.from({length:steps},(_,i)=>({
         t:i*step,
@@ -1875,7 +2018,7 @@ const MELODIC_SNIPPETS = [
     generate(root,sc,sd,out,seed=[]) {
       const pat=[0,0,5,3,0,7,0,3,5];
       const n=Math.floor(SR(seed,20,4,8));
-      const step=SR(seed,21,0.10,0.18)*sd;
+      const step=SR(seed,21,0.38,0.62)*sd;
       const dur=step*SR(seed,22,0.4,0.75);
       const swing=SR(seed,23,0.01,0.06);
       return Array.from({length:n},(_,i)=>({
@@ -1889,7 +2032,7 @@ const MELODIC_SNIPPETS = [
     generate(root,sc,sd,out,seed=[]) {
       const deg=Math.floor(SR(seed,20,0,5));
       const f=scaleTone(root,sc,deg);
-      const dur=SR(seed,21,0.04,0.12)*sd;
+      const dur=SR(seed,21,0.15,0.35)*sd;
       const hits=Math.floor(SR(seed,22,1,4));
       const offsets=[[0],[0,sd],[0,sd*0.75],[0,sd*0.5,sd]];
       return offsets[hits-1].map(t=>({t,fn:w=>pulseLead(f,w,dur,out,seed)}));
@@ -1899,7 +2042,7 @@ const MELODIC_SNIPPETS = [
     generate(root,sc,sd,out,seed=[]) {
       const chords=[[0,4,7],[0,3,7],[0,5,9],[0,4,9],[0,3,5,9]];
       const ch=chords[Math.floor(SR(seed,25,0,chords.length))];
-      const dur=SR(seed,20,0.05,0.14)*sd;
+      const dur=SR(seed,20,0.14,0.32)*sd;
       const swing=SR(seed,23,0.0,0.04);
       const times=[0,sw(sd*0.5,swing,seed,111),sd];
       return times.slice(0,Math.floor(SR(seed,24,2,4))).map(t=>({
@@ -1913,7 +2056,7 @@ const MELODIC_SNIPPETS = [
       const pats=[[0,4,7,4,9,7],[0,3,7,3,5,7],[0,7,4,0,9,5],[0,5,4,7,3,5]];
       const pat=pats[Math.floor(SR(seed,25,0,pats.length))];
       const n=Math.floor(SR(seed,20,4,7));
-      const step=SR(seed,21,0.14,0.24)*sd;
+      const step=SR(seed,21,0.28,0.46)*sd;
       const dur=step*SR(seed,22,0.2,0.45);
       return Array.from({length:n},(_,i)=>({
         t:i*step,
@@ -1926,7 +2069,7 @@ const MELODIC_SNIPPETS = [
       const mels=[[0,2,4,7,4,2],[4,7,9,7,4,2,0],[0,3,5,9,7,5],[2,5,7,9,5,3,0]];
       const mel=mels[Math.floor(SR(seed,25,0,mels.length))];
       const n=Math.floor(SR(seed,20,3,6));
-      const step=SR(seed,21,0.16,0.28)*sd;
+      const step=SR(seed,21,0.30,0.50)*sd;
       const dur=step*0.28;
       const swing=SR(seed,23,0.01,0.05);
       return mel.slice(0,n).map((d,i)=>({
@@ -1993,7 +2136,7 @@ const MELODIC_SNIPPETS = [
       const phrases=[[0,2,4,3,2,0],[4,3,2,0,2,4],[0,4,7,9,7,4],[2,4,7,4,2,0,3],[0,3,5,4,3,0],[7,9,7,5,4,2,0]];
       const ph=phrases[Math.floor(SR(seed,25,0,phrases.length))];
       const n=Math.floor(SR(seed,20,3,ph.length));
-      const step=SR(seed,21,0.18,0.32)*sd;
+      const step=SR(seed,21,0.32,0.54)*sd;
       const dur=step*SR(seed,22,0.75,1.1);
       const swing=SR(seed,23,0.01,0.05);
       return ph.slice(0,n).map((d,i)=>({
@@ -2093,7 +2236,7 @@ const MELODIC_SNIPPETS = [
       ];
       const dir=dirs[Math.floor(SR(seed,25,0,dirs.length))];
       const n=Math.floor(SR(seed,20,4,8));
-      const step=SR(seed,21,0.13,0.22)*sd;
+      const step=SR(seed,21,0.26,0.42)*sd;
       const dur=step*SR(seed,22,0.6,0.95);
       return Array.from({length:n},(_,i)=>({
         t:i*step,
@@ -2152,7 +2295,7 @@ const MELODIC_SNIPPETS = [
       const f=scaleTone(root,sc,0);
       const fHi=f*2;
       const swing=SR(seed,23,0.01,0.04);
-      const dur=SR(seed,20,0.18,0.32)*sd;
+      const dur=SR(seed,20,0.32,0.58)*sd;
       const pat=Math.floor(SR(seed,25,0,4));
       const seqs=[
         [f,fHi,f,f,fHi,f,fHi,f],
@@ -2173,7 +2316,7 @@ const MELODIC_SNIPPETS = [
       const f=scaleTone(root,sc,0);
       const steps=[f,f*1.12,f,f*0.94,f,f*1.06,f*0.97,f];
       const n=Math.floor(SR(seed,20,4,8));
-      const step=SR(seed,21,0.18,0.32)*sd;
+      const step=SR(seed,21,0.32,0.54)*sd;
       const dur=step*SR(seed,22,0.8,1.1);
       return steps.slice(0,n).map((freq,i)=>({
         t:i*step,
@@ -2187,7 +2330,7 @@ const MELODIC_SNIPPETS = [
       const voicings=[[0,4,7,12],[0,3,7,12],[0,5,7,12],[0,4,9,12],[0,3,5,10,12]];
       const v=voicings[Math.floor(SR(seed,25,0,voicings.length))];
       const n=Math.floor(SR(seed,20,3,v.length+2));
-      const step=SR(seed,21,0.14,0.26)*sd;
+      const step=SR(seed,21,0.28,0.50)*sd;
       const dur=step*SR(seed,22,0.65,1.05);
       const swing=SR(seed,23,0.01,0.05);
       // ping-pong: up then back down
@@ -2217,7 +2360,7 @@ const MELODIC_SNIPPETS = [
       const ch=[[0,4,7],[0,3,7],[0,5,9],[0,4,9]];
       const notes=ch[Math.floor(SR(seed,25,0,ch.length))];
       const swing=SR(seed,23,0.02,0.06);
-      const dur=SR(seed,20,0.12,0.28)*sd;
+      const dur=SR(seed,20,0.25,0.48)*sd;
       const gaps=[0,sw(sd*0.25,swing,seed,240),sw(sd*0.5,swing,seed,241),
                   sw(sd*0.75,swing,seed,242),sw(sd,swing,seed,243)];
       const n=Math.floor(SR(seed,21,3,6));
@@ -2249,7 +2392,7 @@ const MELODIC_SNIPPETS = [
       const dir=SR(seed,25,0,1)<0.5 ? 1 : -1;
       const start=Math.floor(SR(seed,20,0,4));
       const n=Math.floor(SR(seed,21,3,7));
-      const step=SR(seed,22,0.08,0.16)*sd;
+      const step=SR(seed,22,0.20,0.36)*sd;
       const dur=step*SR(seed,23,0.5,0.8);
       return Array.from({length:n},(_,i)=>({
         t:i*step,
@@ -2275,7 +2418,7 @@ const MELODIC_SNIPPETS = [
     generate(root,sc,sd,out,seed=[]) {
       const v1=[0,2,4,3]; const v2=[7,5,7,9];
       const n=Math.floor(SR(seed,20,3,5));
-      const step=SR(seed,21,0.22,0.38)*sd;
+      const step=SR(seed,21,0.38,0.62)*sd;
       const dur=step*SR(seed,22,0.7,1.0);
       const swing=SR(seed,23,0.01,0.05);
       const evts=[];
@@ -2306,7 +2449,7 @@ const MELODIC_SNIPPETS = [
       const ch=[[0,4,7],[0,3,7],[0,5,7],[0,4,9]];
       const notes=ch[Math.floor(SR(seed,25,0,ch.length))];
       const swing=SR(seed,23,0.02,0.06);
-      const dur=SR(seed,20,0.08,0.18)*sd; // chopped short
+      const dur=SR(seed,20,0.14,0.28)*sd; // chopped short
       // classic skank: hit on the offbeat (2nd and 4th 8th of each bar)
       const offbeats=[sw(sd*0.5,swing,seed,290),sw(sd,swing,seed,291),sw(sd*1.5,swing,seed,292)];
       const n=Math.floor(SR(seed,21,2,4));
@@ -2321,7 +2464,7 @@ const MELODIC_SNIPPETS = [
       const pats=[[0,4,7,9,7,4],[0,3,7,12,7,3],[0,5,7,9,5,0],[4,7,9,12,9,7,4]];
       const pat=pats[Math.floor(SR(seed,25,0,pats.length))];
       const n=Math.floor(SR(seed,20,4,pat.length+1));
-      const step=SR(seed,21,0.15,0.25)*sd;
+      const step=SR(seed,21,0.28,0.46)*sd;
       const dur=step*SR(seed,22,0.75,1.05);
       return pat.slice(0,n).map((d,i)=>({
         t:i*step,
@@ -2335,7 +2478,7 @@ const MELODIC_SNIPPETS = [
       const deg=Math.floor(SR(seed,25,0,3));
       const f=scaleTone(root,sc,deg);
       const swing=SR(seed,23,0.02,0.08);
-      const dur=SR(seed,20,0.1,0.25)*sd;
+      const dur=SR(seed,20,0.25,0.50)*sd;
       const gates=[1,0,1,1,0,1,0,1];
       const step=sd*0.25;
       return gates.map((on,i)=>on?{
@@ -2758,6 +2901,7 @@ function renderSeq() {
       if(active){
         sq.addEventListener('touchstart',onSeqTouchStart,{passive:false});
         sq.addEventListener('click',onSeqClick);
+
       }
       grid.appendChild(sq);
     }
@@ -2806,7 +2950,33 @@ function renderFX() {
   });
 }
 
-function renderAll() { renderPalette(); renderSeq(); renderFX(); }
+function renderAbRows() {
+  [0,1].forEach(r=>{
+    const row = document.getElementById(r===0?'abRowA':'abRowB');
+    if(!row) return;
+    row.innerHTML = '';
+    for(let c=0;c<8;c++){
+      const btn = document.createElement('button');
+      const abKey = `${r},${c}`;
+      btn.className = 'ab-cell-btn' + (abActiveCells.has(abKey)?' ab-on':'');
+      btn.dataset.abKey = abKey;
+      btn.dataset.abCol = c;
+      btn.setAttribute('aria-label','Toggle auto bass');
+      btn.innerHTML = '<svg viewBox="0 0 12 7" fill="none"><path class="ab-wave" d="M0.5 5.5 Q1.5 0.5 3.5 3.5 Q5.5 6.5 7.5 3.5 Q9.5 0.5 11.5 1.5" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      const toggle = e => {
+        e.preventDefault(); e.stopPropagation();
+        if(abActiveCells.has(abKey)) abActiveCells.delete(abKey);
+        else abActiveCells.add(abKey);
+        btn.classList.toggle('ab-on', abActiveCells.has(abKey));
+      };
+      btn.addEventListener('click', toggle);
+      btn.addEventListener('touchend', toggle, {passive:false});
+      row.appendChild(btn);
+    }
+  });
+}
+
+function renderAll() { renderPalette(); renderSeq(); renderFX(); renderAbRows(); }
 
 /* ── fx popup ──────────────────────────────────────────────── */
 let fxPopTmr=null;
@@ -2816,6 +2986,243 @@ function showFXPop(label,x,y){
   pop.classList.add('show');
   clearTimeout(fxPopTmr);
   fxPopTmr=setTimeout(()=>pop.classList.remove('show'),900);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO BASS ENGINE
+   Reads seqCells at schedule time → derives rhythm + tone → plays
+═══════════════════════════════════════════════════════════════ */
+let abOn      = true;    // enabled by default
+let abChar    = 'sine';  // 'sine' | 'saw' | 'square'
+let abFuzz    = false;   // distortion toggle
+let abSeed    = [];      // fixed seed per session so it sounds consistent
+// Per-cell ab toggle: Set of "row,col" strings
+let abActiveCells = new Set();
+
+// Per-voice randomizable parameters
+let abParams = {
+  sine:   { vol:0.58, attack:0.008, decay:0.55, filterMult:3.5, filterQ:1.2 },
+  saw:    { vol:0.46, attack:0.006, decay:0.50, detune:1.004, filterMult:4.0, filterQ:2.5 },
+  square: { vol:0.38, attack:0.007, decay:0.40, filterMult:2.5, filterQ:1.8 },
+};
+
+function abRandomizeParams() {
+  const r = (lo,hi) => lo + Math.random()*(hi-lo);
+  abParams.sine   = { vol:r(0.42,0.72), attack:r(0.004,0.018), decay:r(0.30,0.80), filterMult:r(2,6),   filterQ:r(0.8,2.5) };
+  abParams.saw    = { vol:r(0.32,0.58), attack:r(0.003,0.012), decay:r(0.28,0.70), detune:r(1.001,1.008), filterMult:r(2.5,7), filterQ:r(1.5,4.5) };
+  abParams.square = { vol:r(0.28,0.52), attack:r(0.005,0.016), decay:r(0.22,0.55), filterMult:r(1.8,4),  filterQ:r(1.0,3.5) };
+}
+
+function abInit() {
+  abSeed = Array.from({length:32},()=>Math.random());
+  // Reflect default-on state immediately
+  const togInit = document.getElementById('abToggle');
+  togInit.classList.add('on');
+  togInit.querySelector('path').setAttribute('stroke','var(--canvas)');
+  document.getElementById('abStrip').classList.add('ab-active');
+  document.getElementById('abMode').classList.add('active');
+  document.getElementById('abMode').textContent = 'sine';
+  // wire toggle
+  const tog = document.getElementById('abToggle');
+  tog.addEventListener('click', ()=>{
+    abOn = !abOn;
+    tog.classList.toggle('on', abOn);
+    document.getElementById('abStrip').classList.toggle('ab-active', abOn);
+    document.getElementById('abMode').classList.toggle('active', abOn);
+    document.getElementById('abMode').textContent = abOn ? abDescribe() : 'off';
+    // set wave path color
+    tog.querySelector('path').setAttribute('stroke', abOn ? 'var(--canvas)' : 'var(--dust2)');
+    abUpdateLEDs();
+  });
+  // wire char buttons
+  document.querySelectorAll('.ab-char-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      abChar = btn.dataset.char;
+      document.querySelectorAll('.ab-char-btn').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      if(abOn) document.getElementById('abMode').textContent = abDescribe();
+    });
+  });
+  // wire fuzz toggle
+  const fuzzBtn = document.getElementById('abFuzz');
+  fuzzBtn.addEventListener('click',()=>{
+    abFuzz = !abFuzz;
+    fuzzBtn.classList.toggle('on', abFuzz);
+  });
+  // wire randomize
+  const randBtn = document.getElementById('abRand');
+  randBtn.addEventListener('click',()=>{
+    abRandomizeParams();
+    randBtn.style.transform='rotate(360deg)';
+    randBtn.style.transition='transform 0.3s';
+    setTimeout(()=>{ randBtn.style.transform=''; randBtn.style.transition=''; },320);
+  });
+}
+
+// ── Derive auto-bass pattern from current seqCells ───────────────
+// Plays ONLY on steps where the ab button is toggled on.
+// globalStep 0-7 = row 0 cols 0-7, globalStep 8-15 = row 1 cols 0-7.
+// Pitch from that cell's melodic root, or song key root.
+function abDerive() {
+  const nCols = 8;
+  const nRows = seqCells.length;
+  const result = new Array(steps).fill(null);
+
+  // Resolve fallback pitch from song key or C2
+  const gRoot = songKey ? songKey.root : 36;
+  const fallbackFreq = m2f(gRoot - 12);
+
+  for(let r=0;r<nRows;r++){
+    for(let c=0;c<nCols;c++){
+      const globalStep = r*8 + c;
+      if(globalStep >= steps) continue;
+      if(!abActiveCells.has(`${r},${c}`)) continue; // button not on
+
+      // Pitch: melodic cell in this exact square, else fallback
+      const cell = seqCells[r][c];
+      let freq = fallbackFreq;
+      if(cell && !cell.type.isDrum) freq = m2f(cell.root - 12);
+      result[globalStep] = freq;
+    }
+  }
+
+  return { pattern: result, mode: 'on' };
+}
+
+function abDescribe() {
+  const active = abActiveCells.size;
+  return `${active} step${active===1?'':`s`}  ·  ${abChar}${abFuzz?' ⌇':''}`;
+}
+
+// ── Update per-cell ab button states ─────────────────────────────
+function abUpdateLEDs() {
+  // Update visual state of all ab-cell-btn elements
+  document.querySelectorAll('.ab-cell-btn').forEach(btn=>{
+    const key = btn.dataset.abKey;
+    btn.classList.toggle('ab-on', abOn && abActiveCells.has(key));
+  });
+}
+
+// ── Flash the ab button for a firing column ───────────────────────
+function abFlashLED(col) {
+  // flash all ab buttons in this column
+  document.querySelectorAll(`.ab-cell-btn[data-ab-col="${col}"]`).forEach(btn=>{
+    btn.classList.add('ab-fire');
+    setTimeout(()=>btn.classList.remove('ab-fire'), 80);
+  });
+}
+
+// ── Fuzz waveshaper ────────────────────────────────────────────────
+function abMakeFuzz() {
+  const ws = AC.createWaveShaper();
+  const n = 512;
+  const curve = new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const x = (i*2/n)-1;
+    curve[i] = Math.tanh(x * 4.5) * 0.7; // hard clip + soften
+  }
+  ws.curve = curve; ws.oversample = '4x';
+  // Output gain after fuzz to compensate loudness
+  const g = AC.createGain(); g.gain.value = 0.55;
+  ws.connect(g);
+  return { input:ws, output:g };
+}
+
+// ── Connect voice output → optional fuzz → masterOut ───────────────
+function abOut(voiceNode) {
+  if(abFuzz){
+    const fuzz = abMakeFuzz();
+    voiceNode.connect(fuzz.input);
+    fuzz.output.connect(masterOut);
+  } else {
+    voiceNode.connect(masterOut);
+  }
+}
+
+// ── Voice synthesis ────────────────────────────────────────────────
+function abPlayNote(freq, when, dur) {
+  if(!AC) return;
+  try {
+    const end = when + dur;
+
+    if(abChar==='sine'){
+      const p = abParams.sine;
+      const decayEnd = Math.max(end, when + p.decay);
+      const o = AC.createOscillator(); o.type='sine';
+      o.frequency.setValueAtTime(freq, when);
+      const vcf = AC.createBiquadFilter(); vcf.type='lowpass';
+      vcf.frequency.setValueAtTime(freq * p.filterMult, when);
+      vcf.frequency.exponentialRampToValueAtTime(freq * 1.1, when + dur * 0.6);
+      vcf.Q.value = p.filterQ;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.001, when);
+      g.gain.linearRampToValueAtTime(p.vol, when + p.attack);
+      g.gain.exponentialRampToValueAtTime(0.001, decayEnd);
+      o.connect(vcf); vcf.connect(g); abOut(g);
+      o.start(when); o.stop(decayEnd+0.05);
+
+    } else if(abChar==='saw'){
+      const p = abParams.saw;
+      const sawEnd = Math.max(end, when + p.decay);
+      [1, p.detune].forEach(d=>{
+        const o=AC.createOscillator(); o.type='sawtooth';
+        o.frequency.setValueAtTime(freq*d, when);
+        const vcf=AC.createBiquadFilter(); vcf.type='lowpass';
+        vcf.frequency.setValueAtTime(freq * p.filterMult, when);
+        vcf.frequency.exponentialRampToValueAtTime(freq*1.1, when+dur*0.5);
+        vcf.Q.value = p.filterQ;
+        const g=AC.createGain();
+        g.gain.setValueAtTime(0.001, when);
+        g.gain.linearRampToValueAtTime(p.vol, when + p.attack);
+        g.gain.exponentialRampToValueAtTime(0.001, sawEnd);
+        o.connect(vcf); vcf.connect(g); abOut(g);
+        o.start(when); o.stop(sawEnd+0.05);
+      });
+
+    } else { // square
+      const p = abParams.square;
+      const sqEnd = Math.max(end, when + p.decay);
+      const o=AC.createOscillator(); o.type='square';
+      o.frequency.setValueAtTime(freq, when);
+      // Square waves are bright — roll off highs more aggressively
+      const vcf=AC.createBiquadFilter(); vcf.type='lowpass';
+      vcf.frequency.setValueAtTime(freq * p.filterMult, when);
+      vcf.frequency.exponentialRampToValueAtTime(freq * 0.9, when + dur * 0.4);
+      vcf.Q.value = p.filterQ;
+      // Sub sine underneath for body
+      const sub=AC.createOscillator(); sub.type='sine';
+      sub.frequency.setValueAtTime(freq*0.5, when);
+      const subG=AC.createGain(); subG.gain.value=0.4;
+      sub.connect(subG); subG.connect(vcf);
+      const g=AC.createGain();
+      g.gain.setValueAtTime(0.001, when);
+      g.gain.linearRampToValueAtTime(p.vol, when + p.attack);
+      g.gain.exponentialRampToValueAtTime(0.001, sqEnd);
+      o.connect(vcf); vcf.connect(g); abOut(g);
+      o.start(when); sub.start(when);
+      o.stop(sqEnd+0.05); sub.stop(sqEnd+0.05);
+    }
+  } catch(e){}
+}
+
+// ── Called from fireStep each step ───────────────────────────────
+function abFireStep(globalStep, when) {
+  if(!abOn||!AC) return;
+  const {pattern, mode} = abDerive();
+  const freq = pattern[globalStep];
+  if(freq && freq > 10) {
+    const dur = stepDur() * 0.72;
+    abPlayNote(freq, when, dur);
+    abFlashLED(globalStep % 8);
+    // update mode label live
+    const modeEl=document.getElementById('abMode');
+    if(modeEl){
+      const modeNames={mirror:'mirror',synco:'syncopate',subdiv:'subdivide',pulse:'pulse'};
+      modeEl.textContent=`${modeNames[mode]||mode}  ·  ${abChar}`;
+    }
+  }
+  // update LEDs every step so they reflect current grid
+  if(globalStep===0) abUpdateLEDs();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2854,6 +3261,7 @@ function fireStep(globalStep, when) {
   const row=Math.floor(globalStep/8), col=globalStep%8;
   const cell=seqCells[row][col];
   if(cell) playSnippetAt(cell, when);
+  abFireStep(globalStep, when); // auto bass
   advanceVoidShape(); // advance every step
 
   const delay=Math.max(0,(when-AC.currentTime)*1000);
@@ -2977,7 +3385,7 @@ function dropOnCell(r,c){
     const free = palette.findIndex(p=>p===null);
     if(free>=0){ releaseCombo(palette[free]); palette[free]=displaced; renderPalette(); }
   }
-  renderSeq(); renderFX();
+  renderSeq(); renderFX(); abUpdateLEDs();
 }
 
 function dissolve(){
@@ -3103,6 +3511,7 @@ document.getElementById('entry').addEventListener('click',beginExperience);
 /* boot */
 initState();
 renderAll();
+abInit();
 // Draw first void shape immediately
 (()=>{const s=document.getElementById('voidShapeSvg');if(s)s.innerHTML=VOID_SHAPES[0](36);})();
 startVoidAnim();
